@@ -1,0 +1,29 @@
+class FirebaseCollections {
+  static const String notification = 'notification';
+  static const String customers = 'customers';
+  static const String shops = 'shops';
+  static const String vehicles = 'vehicles';
+  static const String categories = 'categories';
+  static const String workprogress = 'workprogress';
+  static const String vendors = 'vendors';
+  static const String brands = 'brands';
+  static const String models = 'models';
+  static const String fees = 'fees';
+  static const String labors = 'labors';
+  static const String parts = 'parts';
+  static const String priceMatrix = 'priceMatrix';
+  static const String laborMatrix = 'laborMatrix';
+  static const String tires = 'tires';
+  static const String laborRates = 'laborRates';
+  static const String inspectionTemplates = 'inspectionTemplates';
+  static const String quickNotes = 'quickNotes';
+  static const String general = 'general';
+  static const String workOrders = 'workOrders';
+  static const String cannedServices = 'cannedServices';
+  static const String feesAndTaxes = 'feesAndTaxes';
+  static const String oneTimeCampaigns = 'oneTimeCampaigns';
+  static const String tags = 'tags';
+  static const String automatedCampaigns = 'automatedCampaigns';
+  static const String staffUsers = 'staffUsers';
+  static const String userRoles = 'userRoles';
+}
