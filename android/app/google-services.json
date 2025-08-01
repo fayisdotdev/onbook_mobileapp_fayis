@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "360165740253",
+    "project_id": "onbook-c4eae",
+    "storage_bucket": "onbook-c4eae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:360165740253:android:879ab09c0e16d3ab221534",
+        "android_client_info": {
+          "package_name": "com.example.onbook_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYq39a3F0IHdULWPekDy_7uubQVOLOOWQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:360165740253:android:315e6039baa4c854221534",
+        "android_client_info": {
+          "package_name": "com.on_book_user"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYq39a3F0IHdULWPekDy_7uubQVOLOOWQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
