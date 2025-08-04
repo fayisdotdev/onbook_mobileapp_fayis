@@ -7,7 +7,9 @@ import 'package:onbook_app/features/offers/offers_page.dart';
 import 'package:onbook_app/features/profile/profiles_page.dart';
 // import 'package:onbook_app/features/settings/settings_page.dart';
 import 'package:onbook_app/features/vehicles/vehicles_page.dart';
+import 'package:onbook_app/general/providers/vehicles_provider.dart';
 import 'package:onbook_app/general/widgets/onbook_bottom_navbar.dart';
+import 'package:provider/provider.dart';
 
 class AppRoot extends StatefulWidget {
   final int initialTabIndex;
@@ -27,19 +29,29 @@ class _AppRootState extends State<AppRoot> {
     currentIndex = widget.initialTabIndex;
   }
 
-  final List<Widget> _pages = const [
-    HomeScreen(),
-    BookingsScreen(),
-    // ChatScreen(),
-    // SettingsScreen(),
-    VehiclesScreen(),
+  // final List<Widget> _pages = const [
+  //   HomeScreen(),
+  //   BookingsScreen(),
+  //   // ChatScreen(),
+  //   // SettingsScreen(),
+  //   VehiclesScreen(),
 
-    // ChatScreen(),
-    OffersScreen(),
-    NotificationsScreen(),
-    ProfileScreen(),
+  //   // ChatScreen(),
+  //   OffersScreen(),
+  //   NotificationsScreen(),
+  //   ProfileScreen(),
+  // ];
+  final List<Widget> _pages = [
+    const HomeScreen(),
+    const BookingsScreen(),
+    ChangeNotifierProvider(
+      create: (_) => VehicleProvider(),
+      child: const VehiclesScreen(),
+    ),
+    const OffersScreen(),
+    const NotificationsScreen(),
+    const ProfileScreen(),
   ];
-
   final List<String> _titles = [
     'Dashboard',
     'My Bookings',

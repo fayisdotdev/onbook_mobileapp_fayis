@@ -10,27 +10,32 @@ class AuthProvider extends ChangeNotifier {
 
   bool isLoading = true;
 
-AuthProvider() {
-  // 🔥 Mark loading at the very beginning
-  isLoading = true;
-  notifyListeners();
-
-  _auth.authStateChanges().listen((user) async {
-    _user = user;
-    if (_user != null) {
-      await _fetchUserData();
-    } else {
-      userData = null;
-    }
-    // ✅ Done loading
-    isLoading = false;
+  AuthProvider() {
+    // 🔥 Mark loading at the very beginning
+    isLoading = true;
     notifyListeners();
-  });
-}
 
+    _auth.authStateChanges().listen((user) async {
+      _user = user;
+      if (_user != null) {
+        await _fetchUserData();
+      } else {
+        userData = null;
+      }
+      // ✅ Done loading
+      isLoading = false;
+      notifyListeners();
+    });
+  }
 
   User? get user => _user;
   bool get isLoggedIn => _user != null;
+
+  String? get consumerDocId {
+    if (userData == null) return null;
+    final email = userData!['email'] ?? '';
+    return email.trim().replaceAll(' ', '-').toLowerCase();
+  }
 
   Future<void> signOut() async {
     await _auth.signOut();
@@ -52,15 +57,13 @@ AuthProvider() {
       );
 
       final uid = credential.user?.uid;
-      final docId = '${name.trim()}-${email.trim()}-${phone.trim()}'
-          .replaceAll(' ', '-')
-          .toLowerCase();
-
+      final docId = email.trim().replaceAll(' ', '-').toLowerCase();
       final data = {
         'uid': uid,
         'name': name.trim(),
         'email': email.trim(),
         'phone': phone.trim(),
+        'docId': docId,
         'role': 'consumer',
         'createdAt': FieldValue.serverTimestamp(),
       };

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:onbook_app/general/models/shop_model_enum.dart';
-import 'package:onbook_app/general/models/shop_public_model.dart';
+import 'package:onbook_app/general/models/shop/shop_model_enum.dart';
+import 'package:onbook_app/general/models/shop/shop_public_model.dart';
 
 class ShopPublicProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:onbook_app/general/models/certification_model.dart';
-import 'package:onbook_app/general/models/shop_model_enum.dart';
+import 'package:onbook_app/general/models/shop/certification_model.dart';
+import 'package:onbook_app/general/models/shop/shop_model_enum.dart';
 
 class ShopPublicModel {
   final String? shopId;

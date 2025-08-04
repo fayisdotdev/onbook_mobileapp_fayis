@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:onbook_app/features/approot/app_root.dart';
-import 'package:onbook_app/features/auth/login_screen.dart';
 import 'package:onbook_app/features/chatbot/chatbot.dart';
 import 'package:onbook_app/features/coming_soon/coming_soon.dart';
 import 'package:onbook_app/general/themes/app_colors.dart';

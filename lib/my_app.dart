@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onbook_app/general/providers/shop_provider.dart';
+import 'package:onbook_app/general/providers/vehicles_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -15,9 +16,8 @@ class MyAppWrapper extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-            ChangeNotifierProvider(create: (_) => ShopPublicProvider()),
-
-        // Add more providers here
+        ChangeNotifierProvider(create: (_) => ShopPublicProvider()),
+        ChangeNotifierProvider(create: (_) => VehicleProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
