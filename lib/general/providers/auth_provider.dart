@@ -62,6 +62,7 @@ class AuthProvider extends ChangeNotifier {
         'uid': uid,
         'name': name.trim(),
         'email': email.trim(),
+        'password': password.trim(),
         'phone': phone.trim(),
         'docId': docId,
         'role': 'consumer',
@@ -118,6 +119,58 @@ class AuthProvider extends ChangeNotifier {
       userData = query.docs.first.data();
     } else {
       userData = null;
+    }
+  }
+
+  Future<String?> changeUserPassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+
+      if (user == null) return "User not logged in.";
+
+      final email = user.email;
+      if (email == null) return "No email associated with account.";
+
+      // Reauthenticate the user
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      // Update password
+      await user.updatePassword(newPassword);
+      // ⚠️ Only for testing: update the password in Firestore
+      final docId = email.trim().replaceAll(' ', '-').toLowerCase();
+
+      await _firestore.collection('consumers').doc(docId).update({
+        'password': newPassword.trim(),
+      });
+
+      return null; // success
+    } on FirebaseAuthException catch (e) {
+      return e.message ?? "An error occurred";
+    } catch (e) {
+      return "Something went wrong";
+    }
+  }
+
+  Future<String?> updateUserLocation(GeoPoint geoPoint) async {
+    try {
+      if (userData == null) return 'User data not available';
+      final docId = userData!['docId'];
+      await _firestore.collection('consumers').doc(docId).update({
+        'location': geoPoint,
+      });
+      userData!['location'] = geoPoint;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return 'Failed to update location';
     }
   }
 }

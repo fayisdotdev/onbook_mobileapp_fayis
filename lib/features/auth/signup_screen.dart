@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
+import 'package:onbook_app/general/themes/app_colors.dart';
+import 'package:onbook_app/general/themes/app_icons.dart';
 import 'package:provider/provider.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -34,10 +36,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, {IconData? icon, Widget? suffixIcon}) {
+  InputDecoration _inputDecoration(
+    String label, {
+    String? assetIconPath,
+    Widget? suffixIcon,
+  }) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: icon != null ? Icon(icon) : null,
+      prefixIcon: assetIconPath != null
+          ? Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Image.asset(
+                assetIconPath,
+                width: 24,
+                height: 24,
+                color: AppColors.grey,
+              ),
+            )
+          : null,
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       filled: true,
@@ -62,8 +78,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 Text(
                   "Create Account",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -81,7 +97,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   controller: nameController,
                   validator: (value) =>
                       value == null || value.isEmpty ? 'Enter your name' : null,
-                  decoration: _inputDecoration('Full Name', icon: Icons.person),
+                  decoration: _inputDecoration(
+                    'Full Name',
+                    assetIconPath: AppIcons.signPerson,
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -89,9 +108,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) =>
-                      value != null && value.contains('@') ? null : 'Enter a valid email',
-                  decoration: _inputDecoration('Email', icon: Icons.email_outlined),
+                  validator: (value) => value != null && value.contains('@')
+                      ? null
+                      : 'Enter a valid email',
+                  decoration: _inputDecoration(
+                    'Email',
+                    assetIconPath: AppIcons.signMail,
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -99,9 +122,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: phoneController,
                   keyboardType: TextInputType.phone,
-                  validator: (value) =>
-                      value != null && value.length >= 10 ? null : 'Enter a valid phone number',
-                  decoration: _inputDecoration('Phone Number', icon: Icons.phone),
+                  validator: (value) => value != null && value.length >= 10
+                      ? null
+                      : 'Enter a valid phone number',
+                  decoration: _inputDecoration(
+                    'Phone Number',
+                    assetIconPath: AppIcons.signCall,
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -114,10 +141,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       : 'Password must be at least 6 characters',
                   decoration: _inputDecoration(
                     'Password',
-                    icon: Icons.lock_outline,
+                    assetIconPath: AppIcons.lockIcon,
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      icon: Image.asset(
+                        isPasswordVisible
+                            ? AppIcons.visible
+                            : AppIcons.visibleOff,
+                        width: 24,
+                        height: 24,
                       ),
                       onPressed: () => setState(() {
                         isPasswordVisible = !isPasswordVisible;
@@ -136,10 +167,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       : 'Passwords do not match',
                   decoration: _inputDecoration(
                     'Confirm Password',
-                    icon: Icons.lock_outline,
+                    assetIconPath: AppIcons.lockIcon,
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      icon: Image.asset(
+                        isConfirmPasswordVisible
+                            ? AppIcons.visible
+                            : AppIcons.visibleOff,
+                        width: 24,
+                        height: 24,
                       ),
                       onPressed: () => setState(() {
                         isConfirmPasswordVisible = !isConfirmPasswordVisible;
@@ -162,7 +197,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               phone: phoneController.text.trim(),
                               password: passwordController.text.trim(),
                             );
-                            _showMessage("Account created successfully", isError: false);
+                            _showMessage(
+                              "Account created successfully",
+                              isError: false,
+                            );
                             Navigator.pushReplacementNamed(context, '/home');
                           } catch (e) {
                             _showMessage("Sign Up failed: $e");

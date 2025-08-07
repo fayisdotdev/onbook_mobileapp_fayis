@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:onbook_app/features/vehicles/add_vehicles.dart';
 import 'package:onbook_app/general/models/vehicles/vehcles_model.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
 import 'package:onbook_app/general/providers/vehicles_provider.dart';
 import 'package:onbook_app/general/themes/app_colors.dart';
-import 'package:onbook_app/general/themes/app_fonts.dart';
 import 'package:provider/provider.dart';
 
 class VehiclesScreen extends StatefulWidget {
@@ -77,68 +77,68 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               itemCount: vehicles.length,
               itemBuilder: (context, index) {
                 final vehicle = vehicles[index];
-                return Card(
+                return Container(
                   margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300, width: 1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  elevation: 3,
-                  shadowColor: Colors.black.withOpacity(0.1),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: vehicle.imageUrl.isNotEmpty
-                              ? Image.network(
-                                  vehicle.imageUrl,
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.cover,
-                                )
-                              : Container(
-                                  width: 100,
-                                  height: 100,
-                                  color: Colors.grey[200],
-                                  child: const Icon(
-                                    Icons.directions_car,
-                                    size: 48,
-                                    color: Colors.black45,
-                                  ),
-                                ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                vehicle.carModel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                // style: AppFonts.bold15,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Vehicle Image
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: vehicle.imageUrl.isNotEmpty
+                            ? Image.network(
+                                vehicle.imageUrl,
+                                width: double.infinity,
+                                height: 160,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                width: double.infinity,
+                                height: 160,
+                                color: Colors.grey[200],
+                                child: const Icon(
+                                  Icons.directions_car,
+                                  size: 64,
+                                  color: Colors.black45,
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              _infoRow("Number Plate", vehicle.numberPlate),
-                              _infoRow("VIN", vehicle.vin),
-                              if (vehicle.year.isNotEmpty)
-                                _infoRow("Year", vehicle.year),
-                              if (vehicle.make.isNotEmpty)
-                                _infoRow("Make", vehicle.make),
-                              if (vehicle.ownerName.isNotEmpty)
-                                _infoRow("Owner", vehicle.ownerName),
-                              if (vehicle.color.isNotEmpty)
-                                _infoRow("Color", vehicle.color),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const Gap(12),
+
+                      // First row
+                      infoRow3(
+                        'Model',
+                        vehicle.carModel,
+                        'Number Plate',
+                        vehicle.numberPlate,
+                        'Owner',
+                        vehicle.ownerName,
+                      ),
+                      const Divider(),
+
+                      // Second row
+                      infoRow3(
+                        'Year',
+                        vehicle.year,
+                        'Make',
+                        vehicle.make,
+                        'Color',
+                        vehicle.color,
+                      ),
+                      const Divider(),
+
+                      // // Third row (conditionally)
+                      // if (vehicle.vin.isNotEmpty) ...[
+                      //   infoRow3('VIN', vehicle.vin, '', '', '', ''),
+                      //   const Divider(),
+                      // ],
+                    ],
                   ),
                 );
               },
@@ -161,30 +161,50 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  // Moved this function above infoRow3 to fix reference error
+  Widget labelValue(String label, String value) {
+    if (label.isEmpty || value.isEmpty) return const SizedBox();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget infoRow3(
+    String label1,
+    String value1,
+    String label2,
+    String value2,
+    String label3,
+    String value3,
+  ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Text(
-            "$label: ",
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 13,
-              color: Colors.grey,
-              // AppFonts.medium13.copyWith(color: Colors.grey),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                // AppFonts.regular13.copyWith(color: Colors.black),
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          Expanded(child: labelValue(label1, value1)),
+          Expanded(child: labelValue(label2, value2)),
+          Expanded(child: labelValue(label3, value3)),
         ],
       ),
     );

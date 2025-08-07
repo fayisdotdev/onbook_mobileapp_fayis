@@ -14,9 +14,19 @@ class AppIcons {
   static String profile = "${_baseDir}profile.png";
   static String profileFilled = "${_baseDir}profile_filled.png";
   static String backbttn = "${_baseDir}backbttn.png";
+  // icons
   static String mailIcon = "${_baseDir}mail_icon.png";
+  static String signMail = "${_baseDir}sign_mail.png";
+  static String lockIcon = "${_baseDir}lock.png";
+  static String visible = "${_baseDir}visible_eye_on.png";
+  static String visibleOff = "${_baseDir}visible_eye_off.png";
+
   static String phoneIcon = "${_baseDir}phone_icon.png";
+  static String signCall = "${_baseDir}sign_call.png";
+
   static String userIcon = "${_baseDir}user_icon.png";
+  static String signPerson = "${_baseDir}sign_person.png";
+
   static String locationIcon = "${_baseDir}location_icon.png";
   static String appbaricon = "${_baseDir}appbaricon.png";
   static String search = "${_baseDir}search.png";

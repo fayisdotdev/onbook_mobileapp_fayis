@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:onbook_app/features/bookings/bookings_page.dart';
+import 'package:onbook_app/features/bookings/bookings_preview_page.dart';
 // import 'package:onbook_app/features/chats/chats_page.dart';
 import 'package:onbook_app/features/home/home_screen.dart';
 import 'package:onbook_app/features/notifications/notifications_page.dart';
@@ -43,7 +43,7 @@ class _AppRootState extends State<AppRoot> {
   // ];
   final List<Widget> _pages = [
     const HomeScreen(),
-    const BookingsScreen(),
+    const BookingsPreviewScreen(),
     ChangeNotifierProvider(
       create: (_) => VehicleProvider(),
       child: const VehiclesScreen(),

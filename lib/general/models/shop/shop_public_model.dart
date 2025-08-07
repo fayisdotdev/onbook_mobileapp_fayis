@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:onbook_app/general/models/shop/certification_model.dart';
 import 'package:onbook_app/general/models/shop/shop_model_enum.dart';
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
+import 'package:onbook_app/general/themes/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'signup_screen.dart';
+import 'package:onbook_app/general/themes/app_icons.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -68,7 +70,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  prefixIcon: const Icon(Icons.email_outlined),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Image.asset(
+                      AppIcons.signMail,
+                      color: AppColors.grey,
+
+                      width: 24,
+                      height: 24,
+                    ),
+                  ),
+
                   filled: true,
                   fillColor: Colors.grey.shade100,
                 ),
@@ -83,17 +95,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Image.asset(
+                      AppIcons.lockIcon,
+                      color: AppColors.grey,
+
+                      width: 24,
+                      height: 24,
+                    ),
+                  ),
                   suffixIcon: IconButton(
-                    icon: Icon(
+                    icon: Image.asset(
                       isPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                          ? AppIcons.visible
+                          : AppIcons.visibleOff,
+                      width: 24,
+                      height: 24,
                     ),
                     onPressed: () => setState(() {
                       isPasswordVisible = !isPasswordVisible;
                     }),
                   ),
+
                   filled: true,
                   fillColor: Colors.grey.shade100,
                 ),

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'general/providers/auth_provider.dart';
-import 'features/screens/splash_screen.dart';
+import 'features/splash_screen/splash_screen.dart';
 import 'general/themes/app_colors.dart';
 
 class MyAppWrapper extends StatelessWidget {
