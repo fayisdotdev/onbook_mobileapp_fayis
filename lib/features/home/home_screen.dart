@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onbook_app/features/approot/app_root.dart';
 import 'package:onbook_app/features/chats/chats_page.dart';
+// import 'package:onbook_app/features/chats/chats_page.dart';
 import 'package:onbook_app/features/shops/shop_detailed_page.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
 import 'package:onbook_app/general/providers/shop_provider.dart';
@@ -273,8 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => AppRoot(
-                                    initialTabIndex: 3,
+                                  builder: (_) => ChatScreen(
                                     shopName: shop.shopName ?? 'Unknown Shop',
                                     shopCity: shop.city ?? 'Unknown City',
                                   ),

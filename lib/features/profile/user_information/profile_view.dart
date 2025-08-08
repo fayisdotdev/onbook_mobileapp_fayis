@@ -6,20 +6,39 @@ import 'package:onbook_app/general/themes/app_colors.dart';
 import 'package:onbook_app/general/themes/app_theme.dart';
 import 'package:provider/provider.dart';
 
-class UserDetailsScreen extends StatelessWidget {
+class UserDetailsScreen extends StatefulWidget {
   const UserDetailsScreen({super.key});
 
-  Future<void> _handleLocationUpdate(BuildContext context) async {
+  @override
+  State<UserDetailsScreen> createState() => _UserDetailsScreenState();
+}
+
+class _UserDetailsScreenState extends State<UserDetailsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // After first frame, check if location is missing
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.userData?['location'] == null) {
+        _handleLocationUpdate(context, autoRequest: true);
+      }
+    });
+  }
+
+  Future<void> _handleLocationUpdate(BuildContext context, {bool autoRequest = false}) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Location services are disabled. Please enable them.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (!autoRequest) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location services are disabled. Please enable them.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
@@ -27,27 +46,27 @@ class UserDetailsScreen extends StatelessWidget {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Location permission denied. Cannot update location.',
+        if (!autoRequest) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location permission denied. Cannot update location.'),
+              backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.red,
-          ),
-        );
+          );
+        }
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Location permission permanently denied. Please enable it from settings.',
+      if (!autoRequest) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location permission permanently denied. Please enable it from settings.'),
+            backgroundColor: Colors.red,
           ),
-          backgroundColor: Colors.red,
-        ),
-      );
+        );
+      }
       return;
     }
 
@@ -57,7 +76,6 @@ class UserDetailsScreen extends StatelessWidget {
       );
 
       final geoPoint = GeoPoint(position.latitude, position.longitude);
-
       final result = await authProvider.updateUserLocation(geoPoint);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,12 +85,14 @@ class UserDetailsScreen extends StatelessWidget {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to get location. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (!autoRequest) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to get location. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -145,7 +165,7 @@ class UserDetailsScreen extends StatelessWidget {
                           value: userData['location'] == null
                               ? 'Location not provided'
                               : 'Lat: ${(userData['location'] as GeoPoint).latitude.toStringAsFixed(4)}, '
-                                    'Lng: ${(userData['location'] as GeoPoint).longitude.toStringAsFixed(4)}',
+                                'Lng: ${(userData['location'] as GeoPoint).longitude.toStringAsFixed(4)}',
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
@@ -316,9 +336,7 @@ class UserDetailsScreen extends StatelessWidget {
                 if (newPass.length < 6) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        'New password must be at least 6 characters long',
-                      ),
+                      content: Text('New password must be at least 6 characters long'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -335,10 +353,7 @@ class UserDetailsScreen extends StatelessWidget {
                   return;
                 }
 
-                final authProvider = Provider.of<AuthProvider>(
-                  context,
-                  listen: false,
-                );
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
                 final result = await authProvider.changeUserPassword(
                   currentPassword: current,
                   newPassword: newPass,
@@ -348,9 +363,7 @@ class UserDetailsScreen extends StatelessWidget {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(
-                      result == null ? 'Password updated successfully' : result,
-                    ),
+                    content: Text(result == null ? 'Password updated successfully' : result),
                     backgroundColor: result == null ? Colors.green : Colors.red,
                   ),
                 );
