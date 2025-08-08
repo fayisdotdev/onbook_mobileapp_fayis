@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:onbook_app/features/approot/app_root.dart';
+import 'package:onbook_app/features/chats/chats_page.dart';
 import 'package:onbook_app/features/shops/shop_detailed_page.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
 import 'package:onbook_app/general/providers/shop_provider.dart';
 import 'package:onbook_app/general/themes/app_colors.dart';
+import 'package:onbook_app/general/themes/app_theme.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -197,59 +200,93 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         else
           ...filteredShops.map(
-            (shop) => Card(
-              elevation: 3,
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(14),
+            (shop) => InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                debugPrint('➡️ Tapped on shop: ${shop.shopName}');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ShopDetailScreen(shop: shop),
+                  ),
+                );
+              },
+              child: Card(
+                elevation: 3,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(14),
+                      ),
+                      child: shop.imageUrl != null && shop.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              shop.imageUrl!,
+                              fit: BoxFit.fill,
+                              width: double.infinity,
+                              height: 180,
+                            )
+                          : Image.asset(
+                              'assets/images/norm.png',
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: 180,
+                            ),
                     ),
-                    child: shop.imageUrl != null && shop.imageUrl!.isNotEmpty
-                        ? Image.network(
-                            shop.imageUrl!,
-                            fit: BoxFit.fill,
-                            width: double.infinity,
-                            height: 140,
-                          )
-                        : Image.asset(
-                            'assets/images/norm.png',
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: 140,
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      title: Text(
+                        shop.shopName ?? 'No Name',
+                        style: AppColors.poppinsBold(fontSize: 16),
+                      ),
+                      subtitle: Text(
+                        shop.city ?? 'Unknown Location',
+                        style: AppColors.poppinsRegular(color: Colors.grey),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppTheme.shopActionButton(
+                            icon: Icons.phone,
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '📞 You pressed Call for ${shop.shopName ?? 'this shop'}',
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                  ),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                          const SizedBox(width: 8),
+                          AppTheme.shopActionButton(
+                            icon: Icons.message,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AppRoot(
+                                    initialTabIndex: 3,
+                                    shopName: shop.shopName ?? 'Unknown Shop',
+                                    shopCity: shop.city ?? 'Unknown City',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                    title: Text(
-                      shop.shopName ?? 'No Name',
-                      style: AppColors.poppinsBold(fontSize: 16),
-                    ),
-                    subtitle: Text(
-                      shop.city ?? 'Unknown Location',
-                      style: AppColors.poppinsRegular(color: Colors.grey),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      debugPrint('➡️ Tapped on shop: ${shop.shopName}');
-                      // 👇 Add this navigation
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ShopDetailScreen(shop: shop),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -65,20 +65,20 @@ class OnBookBottomNavBar extends StatelessWidget {
           label: '',
         ),
         //chats
-        // BottomNavigationBarItem(
-        //   tooltip: "Chat",
-        //   activeIcon: ImageIcon(
-        //     AssetImage(AppIcons.chatIcon),
-        //     color: AppColors.primaryColor,
-        //     size: 26,
-        //   ),
-        //   icon: ImageIcon(
-        //     AssetImage(AppIcons.chatIcon),
-        //     color: AppColors.grey,
-        //     size: 24,
-        //   ),
-        //   label: '',
-        // ),
+        BottomNavigationBarItem(
+          tooltip: "Chat",
+          activeIcon: ImageIcon(
+            AssetImage(AppIcons.chatIcon),
+            color: AppColors.primaryColor,
+            size: 26,
+          ),
+          icon: ImageIcon(
+            AssetImage(AppIcons.chatIcon),
+            color: AppColors.grey,
+            size: 24,
+          ),
+          label: '',
+        ),
         //offers
         BottomNavigationBarItem(
           tooltip: "Offers",

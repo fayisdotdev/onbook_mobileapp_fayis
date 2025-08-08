@@ -129,5 +129,43 @@ class AppTheme {
     );
   }
 
+//shop action button
+// Inside AppTheme class
+static Widget shopActionButton({
+  required IconData icon,
+  String? label, // optional
+  required VoidCallback onPressed,
+}) {
+  final buttonStyle = OutlinedButton.styleFrom(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+    ),
+    side: BorderSide(
+      color: AppColors.primaryColor,
+    ),
+  );
+
+  // If label is given, use OutlinedButton.icon, else use OutlinedButton
+  return label != null && label.isNotEmpty
+      ? OutlinedButton.icon(
+          style: buttonStyle,
+          onPressed: onPressed,
+          icon: Icon(icon, size: 18, color: AppColors.primaryColor),
+          label: Text(
+            label,
+            style: AppColors.poppinsMedium(
+              fontSize: 14,
+              color: AppColors.primaryColor,
+            ),
+          ),
+        )
+      : OutlinedButton(
+          style: buttonStyle,
+          onPressed: onPressed,
+          child: Icon(icon, size: 18, color: AppColors.primaryColor),
+        );
+}
+
 
 }
