@@ -17,13 +17,26 @@ class BookingProvider with ChangeNotifier {
   ShopPublicModel? _shop;
   ShopPublicModel? get shop => _shop;
 
-  /// Store the selected shop for later use in booking
   void setShop(ShopPublicModel shop) {
     _shop = shop;
     notifyListeners();
   }
 
-  /// Save booking data to Firestore under "booked_services"
+  /// Centralized serviceDocId sanitizer
+  String sanitizeDocId(String input) {
+    String cleaned = input
+        .trim()
+        .replaceAll(' ', '_')
+        .replaceAll('/', '-')
+        .replaceAll(':', '-')
+        .replaceAll(RegExp(r'[^\w\-]'), '');
+    if (cleaned.isEmpty) {
+      cleaned = DateTime.now().millisecondsSinceEpoch.toString();
+    }
+    return cleaned;
+  }
+
+  /// Create booking
   Future<bool> createBooking({
     required AuthProvider authProvider,
     required DateTime date,
@@ -80,19 +93,6 @@ class BookingProvider with ChangeNotifier {
         "createdAt": FieldValue.serverTimestamp(),
       };
 
-      String sanitizeDocId(String input) {
-        String cleaned = input
-            .trim()
-            .replaceAll(' ', '_')
-            .replaceAll('/', '-')
-            .replaceAll(':', '-')
-            .replaceAll(RegExp(r'[^\w\-]'), '');
-        if (cleaned.isEmpty) {
-          cleaned = DateTime.now().millisecondsSinceEpoch.toString();
-        }
-        return cleaned;
-      }
-
       final rawServiceName =
           "${vehicle.numberPlate}_${DateFormat('yyyy-MM-dd').format(date)}_$timeSlot-${services.join('_')}";
       final serviceDocId = sanitizeDocId(rawServiceName);
@@ -129,13 +129,33 @@ class BookingProvider with ChangeNotifier {
     }
   }
 
-  // // Save booking under: consumers/{userDocId}/vehicles/{vehicleId}/bookings
-  // await FirebaseFirestore.instance
-  //     .collection("consumers")
-  //     .doc(userData["docId"])
-  //     // .collection("vehicles")
-  //     // .doc(vehicle.uid)
-  //     .collection("bookings")
-  //     .doc(serviceName)
-  //     .set(bookingData);
+  /// Fetch bookings for logged-in user
+  Future<List<Map<String, dynamic>>> fetchBookings(AuthProvider authProvider) async {
+    if (!authProvider.isLoggedIn) {
+      _errorMessage = "User not logged in";
+      notifyListeners();
+      return [];
+    }
+
+    try {
+      final userData = authProvider.userData!;
+      final querySnapshot = await _firestore
+          .collection("consumers")
+          .doc(userData["docId"])
+          .collection("bookings")
+          .orderBy("bookingDetails.date", descending: false)
+          .get();
+
+      final bookings =
+          querySnapshot.docs.map((doc) => doc.data()).toList();
+
+      debugPrint("📥 Fetched ${bookings.length} bookings for user");
+      return bookings;
+    } catch (e) {
+      debugPrint("🔥 Error fetching bookings: $e");
+      _errorMessage = "Failed to fetch bookings.";
+      notifyListeners();
+      return [];
+    }
+  }
 }
