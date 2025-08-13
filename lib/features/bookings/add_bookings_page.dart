@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:onbook_app/general/providers/vehicles_provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import 'package:onbook_app/general/providers/auth_provider.dart';
+import 'package:onbook_app/general/providers/shop_provider.dart';
+import 'package:onbook_app/general/models/vehicles/vehcles_model.dart';
+import 'package:onbook_app/general/providers/booking_provider.dart';
 
 class AddBookingPage extends StatefulWidget {
   const AddBookingPage({super.key});
@@ -33,87 +40,150 @@ class _AddBookingPageState extends State<AddBookingPage> {
   ];
 
   List<String> selectedServices = [];
-  String? selectedVehicle;
+  VehicleModel? selectedVehicle;
+  List<VehicleModel> userVehicles = [];
   final notesController = TextEditingController();
   bool previewMode = false;
+  bool loadingVehicles = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVehicles();
+  }
+
+  Future<void> _loadVehicles() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final vehicleProvider = Provider.of<VehicleProvider>(context, listen: false);
+    if (authProvider.consumerDocId != null) {
+      final vehicles = await vehicleProvider.fetchVehicles(authProvider.consumerDocId!);
+      setState(() {
+        userVehicles = vehicles;
+        loadingVehicles = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bookingProvider = Provider.of<BookingProvider>(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Booking'),
         backgroundColor: Colors.red.shade800,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// Calendar
-            calendarView(),
-
-            const SizedBox(height: 12),
-
-            /// Time slots
-            timeSlotSelector(),
-
-            const SizedBox(height: 12),
-
-            /// Services
-            serviceGrid(),
-
-            const SizedBox(height: 12),
-
-            /// Vehicle dropdown
-            vehicleSelector(),
-
-            const SizedBox(height: 12),
-
-            /// Notes
-            TextField(
-              controller: notesController,
-              decoration: InputDecoration(
-                labelText: 'Notes',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              maxLines: 3,
-            ),
-
-            const SizedBox(height: 20),
-
-            /// Buttons
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (!previewMode) {
-                    setState(() => previewMode = true);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Booking Confirmed (Dummy)'),
-                      backgroundColor: Colors.green,
-                    ));
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      previewMode ? Colors.green : Colors.red.shade800,
-                  minimumSize: const Size.fromHeight(50),
-                ),
-                child: Text(previewMode ? 'Confirm Booking' : 'Next'),
+      body: loadingVehicles
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  calendarView(),
+                  const SizedBox(height: 12),
+                  timeSlotSelector(),
+                  const SizedBox(height: 12),
+                  serviceGrid(),
+                  const SizedBox(height: 12),
+                  vehicleSelector(),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesController,
+                    decoration: InputDecoration(
+                      labelText: 'Notes',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: bookingProvider.isSaving
+                          ? null
+                          : () async {
+                              if (!previewMode) {
+                                if (!_validateForm()) return;
+                                setState(() => previewMode = true);
+                              } else {
+                                await _saveBooking(context);
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: previewMode ? Colors.green : Colors.red.shade800,
+                        minimumSize: const Size.fromHeight(50),
+                      ),
+                      child: bookingProvider.isSaving
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(previewMode ? 'Confirm Booking' : 'Next'),
+                    ),
+                  ),
+                  if (previewMode) const SizedBox(height: 20),
+                  if (previewMode) previewCard(),
+                ],
               ),
             ),
-
-            if (previewMode) const SizedBox(height: 20),
-
-            if (previewMode) previewCard(),
-          ],
-        ),
-      ),
     );
+  }
+
+  bool _validateForm() {
+    if (selectedTime == null) {
+      _showError("Please select a time slot");
+      return false;
+    }
+    if (selectedServices.isEmpty) {
+      _showError("Please select at least one service");
+      return false;
+    }
+    if (selectedVehicle == null) {
+      _showError("Please select a vehicle");
+      return false;
+    }
+    return true;
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _saveBooking(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final shopProvider = Provider.of<ShopPublicProvider>(context, listen: false);
+    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+
+    try {
+      await bookingProvider.createBooking(
+        authProvider: authProvider,
+        shopProvider: shopProvider,
+        date: selectedDate,
+        timeSlot: selectedTime!,
+        services: selectedServices,
+        notes: notesController.text,
+        vehicle: selectedVehicle!,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Booking Confirmed!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Reset form
+      setState(() {
+        previewMode = false;
+        selectedDate = DateTime.now();
+        selectedTime = null;
+        selectedServices.clear();
+        selectedVehicle = null;
+        notesController.clear();
+      });
+    } catch (e) {
+      _showError("Error saving booking: $e");
+    }
   }
 
   Widget calendarView() {
@@ -145,8 +215,8 @@ class _AddBookingPageState extends State<AddBookingPage> {
         headerStyle: HeaderStyle(
           formatButtonVisible: false,
           titleCentered: true,
-          titleTextStyle: TextStyle(
-              color: Colors.red.shade900, fontWeight: FontWeight.bold),
+          titleTextStyle:
+              TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold),
           leftChevronIcon: Icon(Icons.chevron_left, color: Colors.red.shade900),
           rightChevronIcon:
               Icon(Icons.chevron_right, color: Colors.red.shade900),
@@ -222,16 +292,17 @@ class _AddBookingPageState extends State<AddBookingPage> {
       children: [
         const Text("Select Vehicle", style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<VehicleModel>(
           value: selectedVehicle,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
-          items: const [
-            DropdownMenuItem(value: 'Toyota Corolla', child: Text('Toyota Corolla')),
-            DropdownMenuItem(value: 'Honda Civic', child: Text('Honda Civic')),
-            DropdownMenuItem(value: 'Ford F-150', child: Text('Ford F-150')),
-          ],
+          items: userVehicles.map((v) {
+            return DropdownMenuItem(
+              value: v,
+              child: Text("${v.make} ${v.carModel} - ${v.numberPlate}"),
+            );
+          }).toList(),
           onChanged: (value) => setState(() => selectedVehicle = value),
         ),
       ],
@@ -252,7 +323,7 @@ class _AddBookingPageState extends State<AddBookingPage> {
         children: [
           Text("📅 Date: ${DateFormat.yMMMMd().format(selectedDate)}"),
           Text("⏰ Time: ${selectedTime ?? 'Not selected'}"),
-          Text("🚗 Vehicle: ${selectedVehicle ?? 'Not selected'}"),
+          Text("🚗 Vehicle: ${selectedVehicle != null ? "${selectedVehicle!.make} ${selectedVehicle!.carModel}" : 'Not selected'}"),
           Text("🛠️ Services: ${selectedServices.isEmpty ? 'None' : selectedServices.join(', ')}"),
           Text("📝 Notes: ${notesController.text.isEmpty ? 'No notes' : notesController.text}"),
         ],
