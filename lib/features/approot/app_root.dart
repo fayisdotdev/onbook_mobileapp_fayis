@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onbook_app/features/bookings/bookings_preview_page.dart';
-import 'package:onbook_app/features/chats/chats_page.dart';
+import 'package:onbook_app/features/chats/chat_shoplist_page.dart';
 import 'package:onbook_app/features/home/home_screen.dart';
 import 'package:onbook_app/features/notifications/notifications_page.dart';
 import 'package:onbook_app/features/offers/offers_page.dart';
@@ -53,9 +53,9 @@ class _AppRootState extends State<AppRoot> {
         create: (_) => VehicleProvider(),
         child: const VehiclesScreen(),
       ),
-      ChatScreen(
-        shopName: widget.shopName ?? 'Chat',
-        shopCity: widget.shopCity ?? '',
+      ChatShopListScreen(
+        // shopName: widget.shopName ?? 'Chat',
+        // shopCity: widget.shopCity ?? '',
       ),
       const OffersScreen(),
       const NotificationsScreen(),

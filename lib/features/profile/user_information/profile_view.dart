@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
 import 'package:onbook_app/general/themes/app_colors.dart';
 import 'package:onbook_app/general/themes/app_theme.dart';
@@ -14,19 +15,44 @@ class UserDetailsScreen extends StatefulWidget {
 }
 
 class _UserDetailsScreenState extends State<UserDetailsScreen> {
+  String? placeName;
+  final RefreshIndicatorState? _refreshIndicatorKey = null;
+
   @override
   void initState() {
     super.initState();
-    // After first frame, check if location is missing
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userData?['location'] == null) {
         _handleLocationUpdate(context, autoRequest: true);
+      } else {
+        final loc = authProvider.userData?['location'] as GeoPoint?;
+        if (loc != null) {
+          _getPlaceName(loc.latitude, loc.longitude);
+        }
       }
     });
   }
 
-  Future<void> _handleLocationUpdate(BuildContext context, {bool autoRequest = false}) async {
+  Future<void> _getPlaceName(double latitude, double longitude) async {
+    try {
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(latitude, longitude);
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        setState(() {
+          placeName =
+              "${place.street}, ${place.locality}, ${place.administrativeArea}";
+        });
+      }
+    } catch (e) {
+      print("Error fetching place name: $e");
+    }
+  }
+
+  Future<void> _handleLocationUpdate(BuildContext context,
+      {bool autoRequest = false}) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -49,7 +75,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         if (!autoRequest) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Location permission denied. Cannot update location.'),
+              content:
+                  Text('Location permission denied. Cannot update location.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -62,11 +89,13 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       if (!autoRequest) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Location permission permanently denied. Please enable it from settings.'),
+            content: Text(
+                'Location permission permanently denied. Enable it in settings.'),
             backgroundColor: Colors.red,
           ),
         );
       }
+      await Geolocator.openAppSettings();
       return;
     }
 
@@ -77,6 +106,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
       final geoPoint = GeoPoint(position.latitude, position.longitude);
       final result = await authProvider.updateUserLocation(geoPoint);
+
+      await _getPlaceName(position.latitude, position.longitude);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -96,6 +127,16 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     }
   }
 
+  Future<void> _refreshData() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.loadUserData();
+
+    final loc = authProvider.userData?['location'] as GeoPoint?;
+    if (loc != null) {
+      await _getPlaceName(loc.latitude, loc.longitude);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userData = Provider.of<AuthProvider>(context).userData;
@@ -111,13 +152,24 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         elevation: 0,
       ),
       backgroundColor: AppColors.scaffoldBg,
-      body: userData == null
-          ? Center(
-              child: Text('No user data available.', style: AppTheme.subtitle),
-            )
-          : Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        child: userData == null
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.8,
+                    child: Center(
+                      child: Text('No user data available.',
+                          style: AppTheme.subtitle),
+                    ),
+                  ),
+                ],
+              )
+            : ListView(
+                padding: const EdgeInsets.all(20.0),
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   Container(
                     width: double.infinity,
@@ -161,11 +213,16 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                         ),
                         _buildDetailRow(
                           icon: Icons.location_on,
-                          label: 'Location',
+                          label: 'Coordinates',
                           value: userData['location'] == null
                               ? 'Location not provided'
                               : 'Lat: ${(userData['location'] as GeoPoint).latitude.toStringAsFixed(4)}, '
                                 'Lng: ${(userData['location'] as GeoPoint).longitude.toStringAsFixed(4)}',
+                        ),
+                        _buildDetailRow(
+                          icon: Icons.map,
+                          label: 'Place Name',
+                          value: placeName ?? 'Unknown',
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
@@ -209,7 +266,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                   ),
                 ],
               ),
-            ),
+      ),
     );
   }
 
@@ -336,7 +393,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 if (newPass.length < 6) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('New password must be at least 6 characters long'),
+                      content: Text(
+                          'New password must be at least 6 characters long'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -353,7 +411,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                   return;
                 }
 
-                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                final authProvider =
+                    Provider.of<AuthProvider>(context, listen: false);
                 final result = await authProvider.changeUserPassword(
                   currentPassword: current,
                   newPassword: newPass,
@@ -363,8 +422,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(result == null ? 'Password updated successfully' : result),
-                    backgroundColor: result == null ? Colors.green : Colors.red,
+                    content: Text(result == null
+                        ? 'Password updated successfully'
+                        : result),
+                    backgroundColor:
+                        result == null ? Colors.green : Colors.red,
                   ),
                 );
               },

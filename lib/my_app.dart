@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onbook_app/general/providers/message_provider.dart';
 import 'package:onbook_app/general/providers/shop_provider.dart';
 import 'package:onbook_app/general/providers/vehicles_provider.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,8 @@ class MyAppWrapper extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ShopPublicProvider()),
         ChangeNotifierProvider(create: (_) => VehicleProvider()),
+          ChangeNotifierProvider(create: (_) => MessageProvider()), // ✅ Add this
+
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

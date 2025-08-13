@@ -108,16 +108,20 @@ class AuthProvider extends ChangeNotifier {
   // ✅ Load consumer user data from Firestore
   Future<void> _fetchUserData() async {
     if (_user == null) return;
+    try {
+      final query = await _firestore
+          .collection('consumers')
+          .where('email', isEqualTo: _user!.email)
+          .limit(1)
+          .get();
 
-    final query = await _firestore
-        .collection('consumers')
-        .where('email', isEqualTo: _user!.email)
-        .limit(1)
-        .get();
-
-    if (query.docs.isNotEmpty) {
-      userData = query.docs.first.data();
-    } else {
+      if (query.docs.isNotEmpty) {
+        userData = query.docs.first.data();
+      } else {
+        userData = null;
+      }
+    } catch (e) {
+      debugPrint("🔥 Error fetching user data: $e");
       userData = null;
     }
   }
@@ -172,5 +176,10 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       return 'Failed to update location';
     }
+  }
+
+  Future<void> loadUserData() async {
+    await _fetchUserData();
+    notifyListeners();
   }
 }

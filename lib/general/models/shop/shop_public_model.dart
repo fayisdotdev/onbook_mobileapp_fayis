@@ -3,6 +3,7 @@ import 'package:onbook_app/general/models/shop/shop_model_enum.dart';
 
 class ShopPublicModel {
   final String? shopId;
+  final String? shopEmail;
   final String? shopName;
   final String? phoneNumber;
   final String? website;
@@ -19,6 +20,7 @@ class ShopPublicModel {
 
   ShopPublicModel({
     this.shopId,
+    this.shopEmail,
     this.shopName,
     this.phoneNumber,
     this.website,
@@ -37,6 +39,7 @@ class ShopPublicModel {
   factory ShopPublicModel.fromMap(Map<String, dynamic> map) {
     return ShopPublicModel(
       shopId: map['shopId'] as String?,
+      shopEmail: map['shopEmail'] as String?,
       shopName: map['shopName'] as String?,
       phoneNumber: map['phoneNumber'] as String?,
       website: map['website'] as String?,

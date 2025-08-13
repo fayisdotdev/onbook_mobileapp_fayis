@@ -16,6 +16,8 @@ class VehiclesScreen extends StatefulWidget {
 
 class _VehiclesScreenState extends State<VehiclesScreen> {
   late Future<List<VehicleModel>> _vehiclesFuture;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -56,94 +58,68 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
       backgroundColor: Colors.white,
       body: RefreshIndicator(
         onRefresh: _refreshVehicles,
-        child: FutureBuilder<List<VehicleModel>>(
-          future: _vehiclesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return const Center(child: Text('Failed to load vehicles'));
-            }
-
-            final vehicles = snapshot.data ?? [];
-
-            if (vehicles.isEmpty) {
-              return const Center(child: Text('No vehicles found.'));
-            }
-
-            return ListView.builder(
+        child: Column(
+          children: [
+            // 🔍 Search Bar
+            Padding(
               padding: const EdgeInsets.all(16),
-              itemCount: vehicles.length,
-              itemBuilder: (context, index) {
-                final vehicle = vehicles[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey.shade300, width: 1),
-                    borderRadius: BorderRadius.circular(8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: 'Search Your Vehicle',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Vehicle Image
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: vehicle.imageUrl.isNotEmpty
-                            ? Image.network(
-                                vehicle.imageUrl,
-                                width: double.infinity,
-                                height: 160,
-                                fit: BoxFit.cover,
-                              )
-                            : Container(
-                                width: double.infinity,
-                                height: 160,
-                                color: Colors.grey[200],
-                                child: const Icon(
-                                  Icons.directions_car,
-                                  size: 64,
-                                  color: Colors.black45,
-                                ),
-                              ),
-                      ),
-                      const Gap(12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+              ),
+            ),
 
-                      // First row
-                      infoRow3(
-                        'Model',
-                        vehicle.carModel,
-                        'Number Plate',
-                        vehicle.numberPlate,
-                        'Owner',
-                        vehicle.ownerName,
-                      ),
-                      const Divider(),
+            Expanded(
+              child: FutureBuilder<List<VehicleModel>>(
+                future: _vehiclesFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return const Center(child: Text('Failed to load vehicles'));
+                  }
 
-                      // Second row
-                      infoRow3(
-                        'Year',
-                        vehicle.year,
-                        'Make',
-                        vehicle.make,
-                        'Color',
-                        vehicle.color,
-                      ),
-                      const Divider(),
+                  final vehicles = snapshot.data ?? [];
 
-                      // // Third row (conditionally)
-                      // if (vehicle.vin.isNotEmpty) ...[
-                      //   infoRow3('VIN', vehicle.vin, '', '', '', ''),
-                      //   const Divider(),
-                      // ],
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+                  // 🔎 Filtering logic
+                  final filteredVehicles = vehicles.where((vehicle) {
+                    final query = _searchQuery.toLowerCase();
+                    return vehicle.carModel.toLowerCase().contains(query) ||
+                        vehicle.numberPlate.toLowerCase().contains(query) ||
+                        vehicle.make.toLowerCase().contains(query) ||
+                        vehicle.ownerName.toLowerCase().contains(query);
+                  }).toList();
+
+                  if (filteredVehicles.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No vehicles found for "$_searchQuery"',
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filteredVehicles.length,
+                    itemBuilder: (context, index) {
+                      final vehicle = filteredVehicles[index];
+                      return _buildVehicleCard(vehicle);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -161,7 +137,55 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 
-  // Moved this function above infoRow3 to fix reference error
+  Widget _buildVehicleCard(VehicleModel vehicle) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: vehicle.imageUrl.isNotEmpty
+                ? Image.network(
+                    vehicle.imageUrl,
+                    width: double.infinity,
+                    height: 160,
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    width: double.infinity,
+                    height: 160,
+                    color: Colors.grey[200],
+                    child: const Icon(
+                      Icons.directions_car,
+                      size: 64,
+                      color: Colors.black45,
+                    ),
+                  ),
+          ),
+          const Gap(12),
+          infoRow3(
+            'Model', vehicle.carModel,
+            'Number Plate', vehicle.numberPlate,
+            'Owner', vehicle.ownerName,
+          ),
+          const Divider(),
+          infoRow3(
+            'Year', vehicle.year,
+            'Make', vehicle.make,
+            'Color', vehicle.color,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget labelValue(String label, String value) {
     if (label.isEmpty || value.isEmpty) return const SizedBox();
     return Column(
@@ -191,12 +215,9 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 
   Widget infoRow3(
-    String label1,
-    String value1,
-    String label2,
-    String value2,
-    String label3,
-    String value3,
+    String label1, String value1,
+    String label2, String value2,
+    String label3, String value3,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -210,3 +231,4 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 }
+

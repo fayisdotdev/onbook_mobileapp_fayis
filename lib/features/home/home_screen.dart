@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:onbook_app/features/approot/app_root.dart';
-import 'package:onbook_app/features/chats/chats_page.dart';
+// import 'package:onbook_app/features/approot/app_root.dart';
+// import 'package:onbook_app/features/chats/chat_shoplist_page.dart';
+import 'package:onbook_app/features/chats/chat_screen.dart';
 // import 'package:onbook_app/features/chats/chats_page.dart';
 import 'package:onbook_app/features/shops/shop_detailed_page.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
@@ -21,10 +22,21 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
 
   @override
-  void initState() {
-    super.initState();
-    _refreshData();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // final authProvider = Provider.of<AuthProvider>(context);
+    // if (authProvider.userData != null) {
+    //   _refreshData();
+    // }
   }
+
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _refreshData();
+  });
+}
 
   Future<void> _refreshData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -33,14 +45,25 @@ class _HomeScreenState extends State<HomeScreen> {
       listen: false,
     );
 
-    final userData = authProvider.userData;
-    final role = userData?['role'];
-    final shopId = userData?['shopId'];
+    try {
+      if (authProvider.userData == null) {
+        await authProvider.loadUserData();
+      }
 
-    if (role == 'consumer' || shopId == null) {
-      await shopProvider.fetchAllShops();
-    } else {
-      await shopProvider.fetchShop(shopId);
+      final userData = authProvider.userData;
+      final role = userData?['role'];
+      final shopId = userData?['shopId'];
+
+      if (role == 'consumer' || shopId == null) {
+        await shopProvider.fetchAllShops();
+      } else {
+        await shopProvider.fetchShop(shopId);
+      }
+    } catch (e) {
+      debugPrint('❌ Error refreshing data: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load shop data.')));
     }
   }
 
@@ -275,8 +298,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => ChatScreen(
-                                    shopName: shop.shopName ?? 'Unknown Shop',
-                                    shopCity: shop.city ?? 'Unknown City',
+                                    shopId: shop.shopId ?? '',
+                                    shopName: shop.shopName ?? '',
+                                    shopCity: shop.city,
+                                    shopEmail: shop.shopEmail ?? '',
                                   ),
                                 ),
                               );
