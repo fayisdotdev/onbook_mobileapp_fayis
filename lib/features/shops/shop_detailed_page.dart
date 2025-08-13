@@ -132,7 +132,9 @@ class ShopDetailScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const AddBookingPage()),
+                    MaterialPageRoute(
+                      builder: (_) => AddBookingPage(shop: shop),
+                    ),
                   );
                 },
 

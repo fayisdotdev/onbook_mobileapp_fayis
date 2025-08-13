@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
 import 'package:onbook_app/general/providers/shop_provider.dart';
 import 'package:onbook_app/general/models/vehicles/vehcles_model.dart';
@@ -10,7 +11,6 @@ class BookingProvider with ChangeNotifier {
   bool _isSaving = false;
   bool get isSaving => _isSaving;
 
-  /// Save booking data to Firestore under "booked_services"
   Future<void> createBooking({
     required AuthProvider authProvider,
     required ShopPublicProvider shopProvider,
@@ -32,8 +32,21 @@ class BookingProvider with ChangeNotifier {
 
     try {
       final userData = authProvider.userData!;
-      final shopData = shopProvider.shop!;
+      final userDocId = userData["docId"];
 
+      // 📅 Format date/time for ID
+      final formattedDate = DateFormat('yyyyMMdd').format(date);
+      final formattedTime = timeSlot
+          .replaceAll(":", "")
+          .replaceAll(" ", "")
+          .toLowerCase();
+      final safeVehicleName =
+          vehicle.carModel.replaceAll(" ", "_").toLowerCase();
+
+      // 🆔 Booking document ID
+      final bookingId = "${safeVehicleName}_${formattedDate}_${formattedTime}";
+
+      // 📦 Booking data
       final bookingData = {
         "bookedBy": {
           "uid": userData["uid"],
@@ -43,11 +56,11 @@ class BookingProvider with ChangeNotifier {
           "phone": userData["phone"],
         },
         "shop": {
-          "shopId": shopData.shopId,
-          "name": shopData.shopName,
-          "email": shopData.shopEmail,
-          "address": shopData.address1,
-          "city": shopData.city,
+          "shopId": shopProvider.shop!.shopId,
+          "name": shopProvider.shop!.shopName,
+          "email": shopProvider.shop!.shopEmail,
+          "address": shopProvider.shop!.address1,
+          "city": shopProvider.shop!.city,
         },
         "bookingDetails": {
           "date": Timestamp.fromDate(date),
@@ -59,8 +72,15 @@ class BookingProvider with ChangeNotifier {
         "createdAt": FieldValue.serverTimestamp(),
       };
 
-      // Add new document in booked_services collection
-      await _firestore.collection("booked_services").add(bookingData);
+      // 💾 Save booking to Firestore
+      await _firestore
+          .collection('consumers')
+          .doc(userDocId)
+          .collection('bookings')
+          .doc(bookingId)
+          .set(bookingData);
+
+      debugPrint("✅ Booking saved: $bookingId");
     } catch (e) {
       debugPrint("🔥 Error creating booking: $e");
       rethrow;

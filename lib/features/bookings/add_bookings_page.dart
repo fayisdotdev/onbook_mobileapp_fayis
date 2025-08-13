@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:onbook_app/general/providers/shop_provider.dart';
 import 'package:onbook_app/general/providers/vehicles_provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:onbook_app/general/providers/auth_provider.dart';
-import 'package:onbook_app/general/providers/shop_provider.dart';
 import 'package:onbook_app/general/models/vehicles/vehcles_model.dart';
 import 'package:onbook_app/general/providers/booking_provider.dart';
+import 'package:onbook_app/general/models/shop/shop_public_model.dart';
 
 class AddBookingPage extends StatefulWidget {
-  const AddBookingPage({super.key});
+  final ShopPublicModel shop;
+
+  const AddBookingPage({super.key, required this.shop});
 
   @override
   State<AddBookingPage> createState() => _AddBookingPageState();
@@ -46,17 +49,23 @@ class _AddBookingPageState extends State<AddBookingPage> {
   bool previewMode = false;
   bool loadingVehicles = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadVehicles();
-  }
+@override
+void initState() {
+  super.initState();
+  _loadVehicles();
+}
+
 
   Future<void> _loadVehicles() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final vehicleProvider = Provider.of<VehicleProvider>(context, listen: false);
+    final vehicleProvider = Provider.of<VehicleProvider>(
+      context,
+      listen: false,
+    );
     if (authProvider.consumerDocId != null) {
-      final vehicles = await vehicleProvider.fetchVehicles(authProvider.consumerDocId!);
+      final vehicles = await vehicleProvider.fetchVehicles(
+        authProvider.consumerDocId!,
+      );
       setState(() {
         userVehicles = vehicles;
         loadingVehicles = false;
@@ -69,7 +78,7 @@ class _AddBookingPageState extends State<AddBookingPage> {
     final bookingProvider = Provider.of<BookingProvider>(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Booking'),
+        title: Text('Book at ${widget.shop.shopName}'),
         backgroundColor: Colors.red.shade800,
         foregroundColor: Colors.white,
       ),
@@ -113,7 +122,9 @@ class _AddBookingPageState extends State<AddBookingPage> {
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: previewMode ? Colors.green : Colors.red.shade800,
+                        backgroundColor: previewMode
+                            ? Colors.green
+                            : Colors.red.shade800,
                         minimumSize: const Size.fromHeight(50),
                       ),
                       child: bookingProvider.isSaving
@@ -149,42 +160,44 @@ class _AddBookingPageState extends State<AddBookingPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _saveBooking(BuildContext context) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final shopProvider = Provider.of<ShopPublicProvider>(context, listen: false);
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+Future<void> _saveBooking(BuildContext context) async {
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  final shopProvider = Provider.of<ShopPublicProvider>(context, listen: false);
+  final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
 
-    try {
-      await bookingProvider.createBooking(
-        authProvider: authProvider,
-        shopProvider: shopProvider,
-        date: selectedDate,
-        timeSlot: selectedTime!,
-        services: selectedServices,
-        notes: notesController.text,
-        vehicle: selectedVehicle!,
-      );
+  try {
+    await bookingProvider.createBooking(
+      authProvider: authProvider,
+      shopProvider: shopProvider, // ✅ NEW
+      date: selectedDate,
+      timeSlot: selectedTime!,
+      services: selectedServices,
+      notes: notesController.text,
+      vehicle: selectedVehicle!,
+    );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Booking Confirmed!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Booking Confirmed!'),
+        backgroundColor: Colors.green,
+      ),
+    );
 
-      // Reset form
-      setState(() {
-        previewMode = false;
-        selectedDate = DateTime.now();
-        selectedTime = null;
-        selectedServices.clear();
-        selectedVehicle = null;
-        notesController.clear();
-      });
-    } catch (e) {
-      _showError("Error saving booking: $e");
-    }
+    setState(() {
+      previewMode = false;
+      selectedDate = DateTime.now();
+      selectedTime = null;
+      selectedServices.clear();
+      selectedVehicle = null;
+      notesController.clear();
+    });
+
+    Navigator.pop(context); // ✅ Auto-close after booking
+  } catch (e) {
+    _showError("Error saving booking: $e");
   }
+}
+
 
   Widget calendarView() {
     return Container(
@@ -215,11 +228,15 @@ class _AddBookingPageState extends State<AddBookingPage> {
         headerStyle: HeaderStyle(
           formatButtonVisible: false,
           titleCentered: true,
-          titleTextStyle:
-              TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold),
+          titleTextStyle: TextStyle(
+            color: Colors.red.shade900,
+            fontWeight: FontWeight.bold,
+          ),
           leftChevronIcon: Icon(Icons.chevron_left, color: Colors.red.shade900),
-          rightChevronIcon:
-              Icon(Icons.chevron_right, color: Colors.red.shade900),
+          rightChevronIcon: Icon(
+            Icons.chevron_right,
+            color: Colors.red.shade900,
+          ),
         ),
       ),
     );
@@ -229,7 +246,10 @@ class _AddBookingPageState extends State<AddBookingPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select Time", style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          "Select Time",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 6),
         Wrap(
           spacing: 8,
@@ -252,7 +272,10 @@ class _AddBookingPageState extends State<AddBookingPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select Services", style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          "Select Services",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 6),
         GridView.builder(
           shrinkWrap: true,
@@ -290,7 +313,10 @@ class _AddBookingPageState extends State<AddBookingPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select Vehicle", style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          "Select Vehicle",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 6),
         DropdownButtonFormField<VehicleModel>(
           value: selectedVehicle,
@@ -321,11 +347,18 @@ class _AddBookingPageState extends State<AddBookingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text("🏪 Shop: ${widget.shop.shopName}"),
           Text("📅 Date: ${DateFormat.yMMMMd().format(selectedDate)}"),
           Text("⏰ Time: ${selectedTime ?? 'Not selected'}"),
-          Text("🚗 Vehicle: ${selectedVehicle != null ? "${selectedVehicle!.make} ${selectedVehicle!.carModel}" : 'Not selected'}"),
-          Text("🛠️ Services: ${selectedServices.isEmpty ? 'None' : selectedServices.join(', ')}"),
-          Text("📝 Notes: ${notesController.text.isEmpty ? 'No notes' : notesController.text}"),
+          Text(
+            "🚗 Vehicle: ${selectedVehicle != null ? "${selectedVehicle!.make} ${selectedVehicle!.carModel}" : 'Not selected'}",
+          ),
+          Text(
+            "🛠️ Services: ${selectedServices.isEmpty ? 'None' : selectedServices.join(', ')}",
+          ),
+          Text(
+            "📝 Notes: ${notesController.text.isEmpty ? 'No notes' : notesController.text}",
+          ),
         ],
       ),
     );
