@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:onbook_app/general/providers/shop_provider.dart';
 import 'package:onbook_app/general/providers/vehicles_provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -49,12 +48,14 @@ class _AddBookingPageState extends State<AddBookingPage> {
   bool previewMode = false;
   bool loadingVehicles = true;
 
-@override
-void initState() {
-  super.initState();
-  _loadVehicles();
-}
-
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<BookingProvider>(context, listen: false).setShop(widget.shop);
+    });
+    _loadVehicles();
+  }
 
   Future<void> _loadVehicles() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -160,44 +161,44 @@ void initState() {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-Future<void> _saveBooking(BuildContext context) async {
-  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-  final shopProvider = Provider.of<ShopPublicProvider>(context, listen: false);
-  final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-
-  try {
-    await bookingProvider.createBooking(
-      authProvider: authProvider,
-      shopProvider: shopProvider, // ✅ NEW
-      date: selectedDate,
-      timeSlot: selectedTime!,
-      services: selectedServices,
-      notes: notesController.text,
-      vehicle: selectedVehicle!,
+  Future<void> _saveBooking(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Booking Confirmed!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    try {
+      final success = await bookingProvider.createBooking(
+        authProvider: authProvider,
+        date: selectedDate,
+        timeSlot: selectedTime!,
+        services: selectedServices,
+        notes: notesController.text,
+        vehicle: selectedVehicle!,
+      );
 
-    setState(() {
-      previewMode = false;
-      selectedDate = DateTime.now();
-      selectedTime = null;
-      selectedServices.clear();
-      selectedVehicle = null;
-      notesController.clear();
-    });
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Booking Confirmed!'),
+            backgroundColor: Colors.green,
+          ),
+        );
 
-    Navigator.pop(context); // ✅ Auto-close after booking
-  } catch (e) {
-    _showError("Error saving booking: $e");
+        setState(() {
+          previewMode = false;
+          selectedDate = DateTime.now();
+          selectedTime = null;
+          selectedServices.clear();
+          selectedVehicle = null;
+          notesController.clear();
+        });
+      }
+    } catch (e) {
+      _showError("Error saving booking: $e");
+    }
   }
-}
-
 
   Widget calendarView() {
     return Container(

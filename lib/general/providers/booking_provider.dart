@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
-import 'package:onbook_app/general/providers/shop_provider.dart';
+import 'package:onbook_app/general/models/shop/shop_public_model.dart';
 import 'package:onbook_app/general/models/vehicles/vehcles_model.dart';
 
 class BookingProvider with ChangeNotifier {
@@ -11,9 +11,21 @@ class BookingProvider with ChangeNotifier {
   bool _isSaving = false;
   bool get isSaving => _isSaving;
 
-  Future<void> createBooking({
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  ShopPublicModel? _shop;
+  ShopPublicModel? get shop => _shop;
+
+  /// Store the selected shop for later use in booking
+  void setShop(ShopPublicModel shop) {
+    _shop = shop;
+    notifyListeners();
+  }
+
+  /// Save booking data to Firestore under "booked_services"
+  Future<bool> createBooking({
     required AuthProvider authProvider,
-    required ShopPublicProvider shopProvider,
     required DateTime date,
     required String timeSlot,
     required List<String> services,
@@ -21,33 +33,29 @@ class BookingProvider with ChangeNotifier {
     required VehicleModel vehicle,
   }) async {
     if (!authProvider.isLoggedIn) {
-      throw Exception("User not logged in");
+      _errorMessage = "User not logged in";
+      notifyListeners();
+      return false;
     }
-    if (shopProvider.shop == null) {
-      throw Exception("No shop selected");
+    if (_shop == null) {
+      _errorMessage = "No shop selected";
+      notifyListeners();
+      return false;
     }
 
     _isSaving = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
       final userData = authProvider.userData!;
-      final userDocId = userData["docId"];
+      final shopData = _shop!;
 
-      // 📅 Format date/time for ID
-      final formattedDate = DateFormat('yyyyMMdd').format(date);
-      final formattedTime = timeSlot
-          .replaceAll(":", "")
-          .replaceAll(" ", "")
-          .toLowerCase();
-      final safeVehicleName =
-          vehicle.carModel.replaceAll(" ", "_").toLowerCase();
+      final serviceName =
+          "${vehicle.numberPlate} - ${DateFormat('yyyy-MM-dd').format(date)} $timeSlot - $services";
 
-      // 🆔 Booking document ID
-      final bookingId = "${safeVehicleName}_${formattedDate}_${formattedTime}";
-
-      // 📦 Booking data
       final bookingData = {
+        "serviceName": serviceName,
         "bookedBy": {
           "uid": userData["uid"],
           "docId": userData["docId"],
@@ -56,37 +64,78 @@ class BookingProvider with ChangeNotifier {
           "phone": userData["phone"],
         },
         "shop": {
-          "shopId": shopProvider.shop!.shopId,
-          "name": shopProvider.shop!.shopName,
-          "email": shopProvider.shop!.shopEmail,
-          "address": shopProvider.shop!.address1,
-          "city": shopProvider.shop!.city,
+          "shopId": shopData.shopId,
+          "name": shopData.shopName,
+          "email": shopData.shopEmail,
+          "address": shopData.address1,
+          "city": shopData.city,
         },
         "bookingDetails": {
           "date": Timestamp.fromDate(date),
           "timeSlot": timeSlot,
           "services": services,
-          "notes": notes,
+          "notes": notes.trim().isEmpty ? null : notes.trim(),
         },
         "vehicle": vehicle.toMap(),
         "createdAt": FieldValue.serverTimestamp(),
       };
 
-      // 💾 Save booking to Firestore
-      await _firestore
-          .collection('consumers')
-          .doc(userDocId)
-          .collection('bookings')
-          .doc(bookingId)
-          .set(bookingData);
+      String sanitizeDocId(String input) {
+        String cleaned = input
+            .trim()
+            .replaceAll(' ', '_')
+            .replaceAll('/', '-')
+            .replaceAll(':', '-')
+            .replaceAll(RegExp(r'[^\w\-]'), '');
+        if (cleaned.isEmpty) {
+          cleaned = DateTime.now().millisecondsSinceEpoch.toString();
+        }
+        return cleaned;
+      }
 
-      debugPrint("✅ Booking saved: $bookingId");
+      final rawServiceName =
+          "${vehicle.numberPlate}_${DateFormat('yyyy-MM-dd').format(date)}_$timeSlot-${services.join('_')}";
+      final serviceDocId = sanitizeDocId(rawServiceName);
+
+      final bookingRef = _firestore
+          .collection("consumers")
+          .doc(userData["docId"])
+          .collection("bookings")
+          .doc(serviceDocId);
+
+      final existing = await bookingRef.get();
+      if (existing.exists) {
+        _errorMessage =
+            "You already have a booking for this vehicle at this time.";
+        _isSaving = false;
+        notifyListeners();
+        return false;
+      }
+
+      await bookingRef.set(bookingData);
+
+      debugPrint("✅ Booking created with ID: $serviceDocId");
+      debugPrint("📦 bookingData: $bookingData");
+
+      return true;
     } catch (e) {
       debugPrint("🔥 Error creating booking: $e");
-      rethrow;
+      _errorMessage = "Failed to create booking. Please try again.";
+      notifyListeners();
+      return false;
     } finally {
       _isSaving = false;
       notifyListeners();
     }
   }
+
+  // // Save booking under: consumers/{userDocId}/vehicles/{vehicleId}/bookings
+  // await FirebaseFirestore.instance
+  //     .collection("consumers")
+  //     .doc(userData["docId"])
+  //     // .collection("vehicles")
+  //     // .doc(vehicle.uid)
+  //     .collection("bookings")
+  //     .doc(serviceName)
+  //     .set(bookingData);
 }
