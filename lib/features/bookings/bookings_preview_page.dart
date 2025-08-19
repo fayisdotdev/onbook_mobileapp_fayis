@@ -40,10 +40,9 @@ class _BookingsPreviewScreenState extends State<BookingsPreviewScreen> {
 
   List<Map<String, dynamic>> get bookingsForSelectedDate {
     return allBookings.where((booking) {
-      final bookingDate = (booking['bookingDetails']?['date'] as Timestamp?)
-          ?.toDate();
-      return bookingDate != null &&
-          DateUtils.isSameDay(bookingDate, selectedDate);
+final bookingDate = (booking['bookingDetails']?['date'] as Timestamp?)?.toDate() ?? DateTime.now();
+return DateUtils.isSameDay(bookingDate, selectedDate);
+
     }).toList();
   }
 

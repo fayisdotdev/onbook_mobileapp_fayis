@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onbook_app/features/bookings/booking_confirmed.dart';
 import 'package:onbook_app/general/providers/vehicles_provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -72,6 +73,17 @@ class _AddBookingPageState extends State<AddBookingPage> {
         loadingVehicles = false;
       });
     }
+  }
+
+  DateTime _combineDateAndTime(DateTime date, String timeSlot) {
+    final timeParts = timeSlot.split(' ');
+    final hourMinute = timeParts[0].split(':');
+    int hour = int.parse(hourMinute[0]);
+    int minute = int.parse(hourMinute[1]);
+    final isPM = timeParts[1].toLowerCase() == 'pm';
+    if (isPM && hour != 12) hour += 12;
+    if (!isPM && hour == 12) hour = 0;
+    return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
   @override
@@ -169,32 +181,37 @@ class _AddBookingPageState extends State<AddBookingPage> {
     );
 
     try {
+      final bookingDateTime = _combineDateAndTime(selectedDate, selectedTime!);
+
       final success = await bookingProvider.createBooking(
         authProvider: authProvider,
-        date: selectedDate,
+        date: bookingDateTime,
         timeSlot: selectedTime!,
         services: selectedServices,
         notes: notesController.text,
         vehicle: selectedVehicle!,
       );
 
+      // ...existing code...
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Booking Confirmed!'),
-            backgroundColor: Colors.green,
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingConfirmedPage(
+              shop: widget.shop,
+              date: bookingDateTime,
+              timeSlot: selectedTime!,
+              vehicle: selectedVehicle!,
+              services: selectedServices,
+              notes: notesController.text,
+            ),
           ),
         );
-
-        setState(() {
-          previewMode = false;
-          selectedDate = DateTime.now();
-          selectedTime = null;
-          selectedServices.clear();
-          selectedVehicle = null;
-          notesController.clear();
-        });
+      } else {
+        final errorMsg = bookingProvider.errorMessage ?? "Could not book slot.";
+        _showError(errorMsg);
       }
+      // ...existing code...
     } catch (e) {
       _showError("Error saving booking: $e");
     }
@@ -217,14 +234,64 @@ class _AddBookingPageState extends State<AddBookingPage> {
           setState(() => selectedDate = selected);
         },
         calendarStyle: CalendarStyle(
-          selectedDecoration: BoxDecoration(
-            color: Colors.red.shade700,
-            shape: BoxShape.circle,
-          ),
-          todayDecoration: BoxDecoration(
-            color: Colors.red.shade300,
-            shape: BoxShape.circle,
-          ),
+          todayDecoration: const BoxDecoration(),
+          selectedDecoration: const BoxDecoration(),
+          weekendTextStyle: const TextStyle(color: Colors.black),
+          defaultTextStyle: const TextStyle(color: Colors.black),
+        ),
+        calendarBuilders: CalendarBuilders(
+          selectedBuilder: (context, day, focusedDay) {
+            final isToday = isSameDay(day, DateTime.now());
+            if (isToday) {
+              return Container(
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade600,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '${day.day}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            }
+            return Container(
+              margin: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.red.shade700,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${day.day}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            );
+          },
+          todayBuilder: (context, day, focusedDay) {
+            return Container(
+              margin: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${day.day}',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            );
+          },
         ),
         headerStyle: HeaderStyle(
           formatButtonVisible: false,
@@ -252,9 +319,13 @@ class _AddBookingPageState extends State<AddBookingPage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 3,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 2.5,
           children: timeSlots.map((slot) {
             final isSelected = selectedTime == slot;
             return ChoiceChip(
@@ -262,6 +333,15 @@ class _AddBookingPageState extends State<AddBookingPage> {
               selected: isSelected,
               onSelected: (_) => setState(() => selectedTime = slot),
               selectedColor: Colors.red.shade200,
+              backgroundColor: Colors.white,
+              side: BorderSide(
+                color: isSelected ? Colors.red.shade800 : Colors.grey.shade400,
+                width: 1.2,
+              ),
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.red.shade900 : Colors.black,
+                fontWeight: FontWeight.w500,
+              ),
             );
           }).toList(),
         ),
@@ -278,33 +358,48 @@ class _AddBookingPageState extends State<AddBookingPage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 6),
-        GridView.builder(
+        GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: services.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            mainAxisExtent: 42,
-          ),
-          itemBuilder: (context, index) {
-            final service = services[index];
+          crossAxisCount: 2,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 3.2,
+          children: services.map((service) {
             final isSelected = selectedServices.contains(service);
-            return FilterChip(
-              label: Text(service),
-              selected: isSelected,
-              onSelected: (value) {
+            return GestureDetector(
+              onTap: () {
                 setState(() {
-                  if (value) {
-                    selectedServices.add(service);
-                  } else {
+                  if (isSelected) {
                     selectedServices.remove(service);
+                  } else {
+                    selectedServices.add(service);
                   }
                 });
               },
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.red.shade200 : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected
+                        ? Colors.red.shade800
+                        : Colors.grey.shade400,
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  service,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected ? Colors.red.shade900 : Colors.black,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             );
-          },
+          }).toList(),
         ),
       ],
     );

@@ -103,8 +103,23 @@ class BookingProvider with ChangeNotifier {
           .collection("bookings")
           .doc(serviceDocId);
 
-      final existing = await bookingRef.get();
-      if (existing.exists) {
+      final shopBookingRef = _firestore
+          .collection("shops")
+          .doc(shopData.shopId)
+          .collection("bookings")
+          .doc(serviceDocId);
+
+      // Improved duplicate booking check: query for same vehicle, date, and timeSlot
+      final duplicateQuery = await _firestore
+          .collection("consumers")
+          .doc(userData["docId"])
+          .collection("bookings")
+          .where("vehicle.numberPlate", isEqualTo: vehicle.numberPlate)
+          .where("bookingDetails.date", isEqualTo: Timestamp.fromDate(date))
+          .where("bookingDetails.timeSlot", isEqualTo: timeSlot)
+          .get();
+
+      if (duplicateQuery.docs.isNotEmpty) {
         _errorMessage =
             "You already have a booking for this vehicle at this time.";
         _isSaving = false;
@@ -112,10 +127,17 @@ class BookingProvider with ChangeNotifier {
         return false;
       }
 
-      await bookingRef.set(bookingData);
+      await Future.wait([
+        bookingRef.set(bookingData), // Save under consumer
+        shopBookingRef.set(bookingData), // Save under shop
+      ]);
 
       debugPrint("✅ Booking created with ID: $serviceDocId");
       debugPrint("📦 bookingData: $bookingData");
+
+      // Clear error message after successful booking
+      _errorMessage = null;
+      notifyListeners();
 
       return true;
     } catch (e) {
@@ -130,7 +152,9 @@ class BookingProvider with ChangeNotifier {
   }
 
   /// Fetch bookings for logged-in user
-  Future<List<Map<String, dynamic>>> fetchBookings(AuthProvider authProvider) async {
+  Future<List<Map<String, dynamic>>> fetchBookings(
+    AuthProvider authProvider,
+  ) async {
     if (!authProvider.isLoggedIn) {
       _errorMessage = "User not logged in";
       notifyListeners();
@@ -146,10 +170,12 @@ class BookingProvider with ChangeNotifier {
           .orderBy("bookingDetails.date", descending: false)
           .get();
 
-      final bookings =
-          querySnapshot.docs.map((doc) => doc.data()).toList();
+      final bookings = querySnapshot.docs.map((doc) => doc.data()).toList();
 
       debugPrint("📥 Fetched ${bookings.length} bookings for user");
+      // Clear error message after successful fetch
+      _errorMessage = null;
+      notifyListeners();
       return bookings;
     } catch (e) {
       debugPrint("🔥 Error fetching bookings: $e");

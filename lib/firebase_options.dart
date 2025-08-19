@@ -52,6 +52,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '360165740253',
     projectId: 'onbook-c4eae',
     authDomain: 'onbook-c4eae.firebaseapp.com',
+    databaseURL: 'https://onbook-c4eae-default-rtdb.firebaseio.com',
     storageBucket: 'onbook-c4eae.firebasestorage.app',
     measurementId: 'G-DVVEF0Y4QF',
   );
@@ -61,6 +62,7 @@ class DefaultFirebaseOptions {
     appId: '1:360165740253:android:879ab09c0e16d3ab221534',
     messagingSenderId: '360165740253',
     projectId: 'onbook-c4eae',
+    databaseURL: 'https://onbook-c4eae-default-rtdb.firebaseio.com',
     storageBucket: 'onbook-c4eae.firebasestorage.app',
   );
 
@@ -69,7 +71,9 @@ class DefaultFirebaseOptions {
     appId: '1:360165740253:ios:e62f5d3d4f734509221534',
     messagingSenderId: '360165740253',
     projectId: 'onbook-c4eae',
+    databaseURL: 'https://onbook-c4eae-default-rtdb.firebaseio.com',
     storageBucket: 'onbook-c4eae.firebasestorage.app',
     iosBundleId: 'com.example.onbookApp',
   );
+
 }

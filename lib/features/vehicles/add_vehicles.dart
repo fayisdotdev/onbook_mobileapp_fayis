@@ -54,7 +54,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
       final uploaderName = authProvider.userData?['name']?.trim() ?? "Unknown";
       final vinOrNp = _vinOrNpController.text.trim();
-      final vehicleUid = _modelController.text.trim() + vinOrNp.replaceAll(' ', '-').toLowerCase();
+      final vehicleUid = '${_modelController.text.trim()}-${vinOrNp.replaceAll(' ', '-').toLowerCase()}';
       final now = DateTime.now();
 
       String? imageUrl;

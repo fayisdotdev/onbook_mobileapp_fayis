@@ -39,7 +39,7 @@ class ShopPublicModel {
   factory ShopPublicModel.fromMap(Map<String, dynamic> map) {
     return ShopPublicModel(
       shopId: map['shopId'] as String?,
-      shopEmail: map['shopEmail'] as String?,
+      shopEmail: map['shopEmail'] ?? map['email'] as String?,
       shopName: map['shopName'] as String?,
       phoneNumber: map['phoneNumber'] as String?,
       website: map['website'] as String?,
@@ -54,8 +54,10 @@ class ShopPublicModel {
       status: map['status'] != null ? stringToEnum(map['status']) : null,
       certifications: map['certifications'] != null
           ? List<CertificationModel>.from(
-              (map['certifications'] as List)
-                  .map((e) => CertificationModel.fromMap(e)))
+              (map['certifications'] as List).map(
+                (e) => CertificationModel.fromMap(e),
+              ),
+            )
           : null,
     );
   }

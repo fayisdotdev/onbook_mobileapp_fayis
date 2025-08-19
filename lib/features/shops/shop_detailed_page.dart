@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onbook_app/features/bookings/add_bookings_page.dart';
 import 'package:onbook_app/general/models/shop/shop_public_model.dart';
 import 'package:onbook_app/general/themes/app_colors.dart';
+import 'package:onbook_app/features/chats/chat_screen.dart';
 
 class ShopDetailScreen extends StatelessWidget {
   final ShopPublicModel shop;
@@ -12,15 +13,15 @@ class ShopDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final fullAddress =
         [
-              shop.address1,
-              shop.address2,
-              shop.city,
-              shop.province,
-              shop.postcode,
-              shop.country,
-            ]
-            .where((element) => element != null && element.trim().isNotEmpty)
-            .join(', ');
+          shop.address1,
+          shop.address2,
+          shop.city,
+          shop.province,
+          shop.postcode,
+          shop.country,
+        ]
+        .where((element) => element != null && element.trim().isNotEmpty)
+        .join(', ');
 
     return Scaffold(
       appBar: AppBar(
@@ -86,8 +87,94 @@ class ShopDetailScreen extends StatelessWidget {
             /// Info tiles
             _infoTile('👤 Owner', shop.ownerName),
             _infoTile('📞 Phone', shop.phoneNumber),
+            _infoTile('✉️ Email', shop.shopEmail),
             _infoTile('🌐 Website', shop.website),
             _infoTile('📍 Address', fullAddress),
+
+            const SizedBox(height: 16),
+
+            /// Booking button
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddBookingPage(shop: shop),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Book Now',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+
+            /// Call & Message buttons under Book Now
+            const SizedBox(height: 12),
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.phone, color: Colors.white),
+                    label: const Text('Call'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '📞 You pressed Call for ${shop.shopName ?? 'this shop'}',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.message, color: Colors.white),
+                    label: const Text('Message'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            shopId: shop.shopId ?? '',
+                            shopName: shop.shopName ?? '',
+                            shopCity: shop.city,
+                            shopEmail: shop.shopEmail ?? '',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
 
             const SizedBox(height: 16),
 
@@ -125,35 +212,6 @@ class ShopDetailScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                 ],
               ),
-
-            /// Booking button placeholder
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AddBookingPage(shop: shop),
-                    ),
-                  );
-                },
-
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Book Now',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
           ],
         ),
       ),
