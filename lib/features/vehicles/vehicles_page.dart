@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:onbook_app/features/vehicles/add_vehicles.dart';
+import 'package:onbook_app/features/vehicles/detailed_vehilce_page.dart';
 import 'package:onbook_app/general/models/vehicles/vehcles_model.dart';
 import 'package:onbook_app/general/providers/auth_provider.dart';
 import 'package:onbook_app/general/providers/vehicles_provider.dart';
@@ -138,50 +139,78 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 
   Widget _buildVehicleCard(VehicleModel vehicle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300, width: 1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: vehicle.imageUrl.isNotEmpty
-                ? Image.network(
-                    vehicle.imageUrl,
-                    width: double.infinity,
-                    height: 160,
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    width: double.infinity,
-                    height: 160,
-                    color: Colors.grey[200],
-                    child: const Icon(
-                      Icons.directions_car,
-                      size: 64,
-                      color: Colors.black45,
+    return InkWell(
+      onTap: () async {
+        // fetch all current vehicles (from the same future)
+        final vehicles = await _vehiclesFuture;
+        final index = vehicles.indexWhere((v) => v.uid == vehicle.uid);
+
+        if (!mounted) return;
+        final updated = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VehicleDetailPagerScreen(
+              vehicles: vehicles,
+              initialIndex: index,
+            ),
+          ),
+        );
+
+        if (updated == true) {
+          _refreshVehicles();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: vehicle.imageUrl.isNotEmpty
+                  ? Image.network(
+                      vehicle.imageUrl,
+                      width: double.infinity,
+                      height: 160,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: double.infinity,
+                      height: 160,
+                      color: Colors.grey[200],
+                      child: const Icon(
+                        Icons.directions_car,
+                        size: 64,
+                        color: Colors.black45,
+                      ),
                     ),
-                  ),
-          ),
-          const Gap(12),
-          infoRow3(
-            'Model', vehicle.carModel,
-            'Number Plate', vehicle.numberPlate,
-            'Owner', vehicle.ownerName,
-          ),
-          const Divider(),
-          infoRow3(
-            'Year', vehicle.year,
-            'Make', vehicle.make,
-            'Color', vehicle.color,
-          ),
-        ],
+            ),
+            const Gap(12),
+            infoRow3(
+              'Model',
+              vehicle.carModel,
+              'Number Plate',
+              vehicle.numberPlate,
+              'Owner',
+              vehicle.ownerName,
+            ),
+            const Divider(),
+            infoRow3(
+              'Year',
+              vehicle.year,
+              'Make',
+              vehicle.make,
+              'Color',
+              vehicle.color,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -215,9 +244,12 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 
   Widget infoRow3(
-    String label1, String value1,
-    String label2, String value2,
-    String label3, String value3,
+    String label1,
+    String value1,
+    String label2,
+    String value2,
+    String label3,
+    String value3,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -231,4 +263,3 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 }
-

@@ -58,4 +58,33 @@ class VehicleModel {
       imageUrl: map['imageUrl'] ?? '',
     );
   }
+
+  /// ✅ Add copyWith so you can update only some fields
+  VehicleModel copyWith({
+    String? uid,
+    String? numberPlate,
+    String? vin,
+    String? year,
+    String? make,
+    String? carModel,
+    String? ownerName,
+    String? color,
+    String? uploadedBy,
+    Timestamp? uploadedAt,
+    String? imageUrl,
+  }) {
+    return VehicleModel(
+      uid: uid ?? this.uid,
+      numberPlate: numberPlate ?? this.numberPlate,
+      vin: vin ?? this.vin,
+      year: year ?? this.year,
+      make: make ?? this.make,
+      carModel: carModel ?? this.carModel,
+      ownerName: ownerName ?? this.ownerName,
+      color: color ?? this.color,
+      uploadedBy: uploadedBy ?? this.uploadedBy,
+      uploadedAt: uploadedAt ?? this.uploadedAt,
+      imageUrl: imageUrl ?? this.imageUrl,
+    );
+  }
 }
