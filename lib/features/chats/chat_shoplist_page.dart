@@ -115,6 +115,7 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
                     itemCount: filteredShops.length,
                     itemBuilder: (context, index) {
                       final shop = filteredShops[index];
+                      // ...existing code...
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Colors.blue.shade100,
@@ -125,6 +126,12 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(shop['city'] ?? ''),
+                        // trailing: shop['lastMessageTime'] == null
+                        //     ? const Text(
+                        //         "Start new chat",
+                        //         style: TextStyle(color: Colors.green),
+                        //       )
+                        //     : null,
                         onTap: () {
                           Navigator.push(
                             context,
@@ -139,6 +146,7 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
                           );
                         },
                       );
+                      // ...existing code...
                     },
                   );
                 },

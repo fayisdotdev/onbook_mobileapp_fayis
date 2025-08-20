@@ -97,56 +97,66 @@ class MessageProvider with ChangeNotifier {
   }
 
   /// Fetch shop list for chat screen (recent chats + all shops)
-  Future<List<Map<String, dynamic>>> fetchShopsList() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return [];
+  /// Fetch shop list for chat screen (recent chats + all shops)
+Future<List<Map<String, dynamic>>> fetchShopsList() async {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) return [];
 
-    final consumerDocId = currentUser.email!
-        .trim()
-        .replaceAll(' ', '-')
-        .toLowerCase();
+  final userId = currentUser.uid;
 
-    // Fetch recent chats
-    final recentChatDocs = await FirebaseFirestore.instance
-        .collection('chats')
-        .where('participants', arrayContains: consumerDocId)
-        .orderBy('lastMessageTime', descending: true)
-        .get();
+  // Step 1: Fetch all shops
+  final allShopsDocs = await FirebaseFirestore.instance
+      .collection('shops')
+      .get();
 
-    final recentShops = recentChatDocs.docs.map((doc) {
-      final data = doc.data();
-      return {
-        'shopId': data['shopId'] ?? '',
-        'shopName': data['shopName'] ?? '',
-        'city': data['shopCity'] ?? '',
-        'email': data['shopEmail'] ?? '',
-        'lastMessageTime': (data['lastMessageTime'] != null)
-            ? (data['lastMessageTime'] as Timestamp).toDate()
-            : null,
-      };
-    }).toList();
+  List<Map<String, dynamic>> recentShops = [];
+  List<Map<String, dynamic>> allShops = [];
 
-    // Fetch all shops
-    final allShopsDocs = await FirebaseFirestore.instance
+  for (var doc in allShopsDocs.docs) {
+    final data = doc.data();
+    final shopId = doc.id;
+
+    // Step 2: build chatId
+    final chatId = _chatId(userId, shopId);
+
+    // Step 3: check if chat exists for this user
+    final chatDoc = await FirebaseFirestore.instance
         .collection('shops')
+        .doc(shopId)
+        .collection('chats')
+        .doc(chatId)
         .get();
 
-    final allShops = allShopsDocs.docs.map((doc) {
-      final data = doc.data();
-      return {
-        'shopId': doc.id,
-        'shopName': data['shopName'] ?? '',
-        'city': data['city'] ?? '',
-        'email': data['email'] ?? '',
-        'lastMessageTime': null,
-      };
-    }).toList();
+    if (chatDoc.exists) {
+      final chatData = chatDoc.data()!;
+      recentShops.add({
+        'shopId': shopId,
+        'shopName': chatData['shopName'] ?? data['shopName'] ?? '',
+        'city': chatData['shopCity'] ?? data['city'] ?? '',
+        'email': chatData['shopEmail'] ?? data['email'] ?? '',
+        'lastMessageTime': (chatData['lastMessageTime'] != null)
+            ? (chatData['lastMessageTime'] as Timestamp).toDate()
+            : null,
+      });
+    }
 
-    final recentIds = recentShops.map((e) => e['shopId']).toSet();
-    final newShops = allShops
-        .where((shop) => !recentIds.contains(shop['shopId']))
-        .toList();
-
-    return [...recentShops, ...newShops];
+    // Add shop to allShops as fallback
+    allShops.add({
+      'shopId': shopId,
+      'shopName': data['shopName'] ?? '',
+      'city': data['city'] ?? '',
+      'email': data['email'] ?? '',
+      'lastMessageTime': null,
+    });
   }
+
+  // Step 4: Merge lists (recent chats first, then others)
+  final recentIds = recentShops.map((e) => e['shopId']).toSet();
+  final newShops = allShops
+      .where((shop) => !recentIds.contains(shop['shopId']))
+      .toList();
+
+  return [...recentShops, ...newShops];
+}
+
 }
