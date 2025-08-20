@@ -58,8 +58,7 @@ class _ChatScreenState extends State<ChatScreen> {
         shopName: widget.shopName,
         city: widget.shopCity,
         ownerName: widget.shopEmail,
-        shopEmail:
-            widget.shopEmail, // ✅ Make sure ShopPublicModel supports this
+        shopEmail: widget.shopEmail,
       ),
     );
 
@@ -87,7 +86,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     final msg = messages[index];
                     final isMe = msg['senderId'] == _currentUserId;
 
-                    // Swap sides: if I'm the sender, put message on LEFT
                     return Align(
                       alignment: isMe
                           ? Alignment.centerLeft
@@ -100,12 +98,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: isMe
-                              ? Colors
-                                    .grey
-                                    .shade300 // my messages now grey
-                              : Theme.of(
-                                  context,
-                                ).primaryColor, // shop messages now primary
+                              ? Colors.grey.shade300
+                              : Theme.of(context).primaryColor,
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(12),
                             topRight: const Radius.circular(12),
@@ -121,9 +115,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           msg['message'] ?? '',
                           style: TextStyle(
                             fontSize: 16,
-                            color: isMe
-                                ? Colors.black
-                                : Colors.white, // match new colors
+                            color: isMe ? Colors.black : Colors.white,
                           ),
                         ),
                       ),
