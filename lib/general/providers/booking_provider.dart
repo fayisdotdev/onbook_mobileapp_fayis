@@ -163,6 +163,7 @@ class BookingProvider with ChangeNotifier {
 
     try {
       final userData = authProvider.userData!;
+      // ...existing code...
       final querySnapshot = await _firestore
           .collection("consumers")
           .doc(userData["docId"])
@@ -170,7 +171,17 @@ class BookingProvider with ChangeNotifier {
           .orderBy("bookingDetails.date", descending: false)
           .get();
 
-      final bookings = querySnapshot.docs.map((doc) => doc.data()).toList();
+      final bookings = querySnapshot.docs
+          .map((doc) => doc.data())
+          .where(
+            (data) =>
+                data["isDeleted"] !=
+                true, // Show if isDeleted is false, missing, or not true
+          )
+          .toList();
+      // ...existing code...
+
+      // final bookings = querySnapshot.docs.map((doc) => doc.data()).toList();
 
       debugPrint("📥 Fetched ${bookings.length} bookings for user");
       // Clear error message after successful fetch
@@ -184,4 +195,34 @@ class BookingProvider with ChangeNotifier {
       return [];
     }
   }
+
+  // ...existing code...
+  Future<void> deleteBooking(Map<String, dynamic> booking) async {
+    try {
+      final bookedBy = booking['bookedBy'];
+      final shop = booking['shop'];
+      final serviceDocId = sanitizeDocId(booking['serviceName'] ?? '');
+
+      // Mark as deleted in both consumer and shop collections
+      await Future.wait([
+        _firestore
+            .collection("consumers")
+            .doc(bookedBy["docId"])
+            .collection("bookings")
+            .doc(serviceDocId)
+            .update({"isDeleted": true}),
+        _firestore
+            .collection("shops")
+            .doc(shop["shopId"])
+            .collection("bookings")
+            .doc(serviceDocId)
+            .update({"isDeleted": true}),
+      ]);
+      debugPrint("🗑️ Booking marked as deleted: $serviceDocId");
+    } catch (e) {
+      debugPrint("🔥 Error deleting booking: $e");
+    }
+  }
+
+  // ...existing code...
 }

@@ -48,7 +48,7 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
       appBar: AppBar(title: const Text("Select Shop to Chat")),
       body: Column(
         children: [
-          // 🔍 Search Bar like HomeScreen
+          // 🔍 Search Bar
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -56,7 +56,6 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
               onChanged: (value) => setState(() => _searchQuery = value),
               decoration: InputDecoration(
                 hintText: 'Search shop',
-                // hintStyle: const TextStyle(fontSize: 10),
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -88,7 +87,7 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
                     );
                   }
 
-                  // 🔍 Apply filtering like HomeScreen
+                  // 🔍 Apply filtering
                   final query = _searchQuery.toLowerCase();
                   final filteredShops = snapshot.data!.where((shop) {
                     final name = (shop['shopName'] ?? '').toLowerCase();
@@ -116,6 +115,7 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
                     itemCount: filteredShops.length,
                     itemBuilder: (context, index) {
                       final shop = filteredShops[index];
+                      // ...existing code...
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Colors.blue.shade100,
@@ -126,6 +126,12 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(shop['city'] ?? ''),
+                        // trailing: shop['lastMessageTime'] == null
+                        //     ? const Text(
+                        //         "Start new chat",
+                        //         style: TextStyle(color: Colors.green),
+                        //       )
+                        //     : null,
                         onTap: () {
                           Navigator.push(
                             context,
@@ -140,6 +146,7 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
                           );
                         },
                       );
+                      // ...existing code...
                     },
                   );
                 },
