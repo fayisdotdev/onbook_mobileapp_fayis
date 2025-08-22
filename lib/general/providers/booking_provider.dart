@@ -67,8 +67,14 @@ class BookingProvider with ChangeNotifier {
       final serviceName =
           "${vehicle.numberPlate} - ${DateFormat('yyyy-MM-dd').format(date)} $timeSlot - $services";
 
+      final rawServiceName =
+          "${vehicle.numberPlate}_${DateFormat('yyyy-MM-dd').format(date)}_$timeSlot-${services.join('_')}";
+      final serviceDocId = sanitizeDocId(rawServiceName);
+
       final bookingData = {
         "serviceName": serviceName,
+        "serviceDocId": serviceDocId, // 👈 store docId explicitly
+
         "bookedBy": {
           "uid": userData["uid"],
           "docId": userData["docId"],
@@ -93,10 +99,6 @@ class BookingProvider with ChangeNotifier {
         "createdAt": FieldValue.serverTimestamp(),
       };
 
-      final rawServiceName =
-          "${vehicle.numberPlate}_${DateFormat('yyyy-MM-dd').format(date)}_$timeSlot-${services.join('_')}";
-      final serviceDocId = sanitizeDocId(rawServiceName);
-
       final bookingRef = _firestore
           .collection("consumers")
           .doc(userData["docId"])
@@ -109,7 +111,7 @@ class BookingProvider with ChangeNotifier {
           .collection("bookings")
           .doc(serviceDocId);
 
-      // Improved duplicate booking check: query for same vehicle, date, and timeSlot
+      // 🔍 Improved duplicate booking check
       final duplicateQuery = await _firestore
           .collection("consumers")
           .doc(userData["docId"])
@@ -119,7 +121,14 @@ class BookingProvider with ChangeNotifier {
           .where("bookingDetails.timeSlot", isEqualTo: timeSlot)
           .get();
 
-      if (duplicateQuery.docs.isNotEmpty) {
+      final activeDuplicates = duplicateQuery.docs.where((doc) {
+        final data = doc.data();
+        // 👇 if field missing, treat as active
+        if (!data.containsKey("isDeleted")) return true;
+        return data["isDeleted"] != true; // false or null = active
+      }).toList();
+
+      if (activeDuplicates.isNotEmpty) {
         _errorMessage =
             "You already have a booking for this vehicle at this time.";
         _isSaving = false;
@@ -127,22 +136,20 @@ class BookingProvider with ChangeNotifier {
         return false;
       }
 
+      // ✅ Save booking because no duplicate found
       await Future.wait([
         bookingRef.set(bookingData), // Save under consumer
         shopBookingRef.set(bookingData), // Save under shop
       ]);
 
       debugPrint("✅ Booking created with ID: $serviceDocId");
-      debugPrint("📦 bookingData: $bookingData");
-
-      // Clear error message after successful booking
       _errorMessage = null;
       notifyListeners();
 
       return true;
     } catch (e) {
       debugPrint("🔥 Error creating booking: $e");
-      _errorMessage = "Failed to create booking. Please try again.";
+      _errorMessage = "Failed to create booking.";
       notifyListeners();
       return false;
     } finally {
@@ -163,7 +170,7 @@ class BookingProvider with ChangeNotifier {
 
     try {
       final userData = authProvider.userData!;
-      // ...existing code...
+
       final querySnapshot = await _firestore
           .collection("consumers")
           .doc(userData["docId"])
@@ -171,20 +178,16 @@ class BookingProvider with ChangeNotifier {
           .orderBy("bookingDetails.date", descending: false)
           .get();
 
-      final bookings = querySnapshot.docs
-          .map((doc) => doc.data())
-          .where(
-            (data) =>
-                data["isDeleted"] !=
-                true, // Show if isDeleted is false, missing, or not true
-          )
-          .toList();
-      // ...existing code...
+      // Explicitly exclude deleted bookings
+      final bookings = querySnapshot.docs.map((doc) => doc.data()).where((
+        data,
+      ) {
+        final isDeleted = data["isDeleted"] as bool?;
+        return isDeleted == null || isDeleted == false; // only active
+      }).toList();
 
-      // final bookings = querySnapshot.docs.map((doc) => doc.data()).toList();
+      debugPrint("📥 Fetched ${bookings.length} active bookings for user");
 
-      debugPrint("📥 Fetched ${bookings.length} bookings for user");
-      // Clear error message after successful fetch
       _errorMessage = null;
       notifyListeners();
       return bookings;
@@ -196,12 +199,18 @@ class BookingProvider with ChangeNotifier {
     }
   }
 
-  // ...existing code...
   Future<void> deleteBooking(Map<String, dynamic> booking) async {
     try {
       final bookedBy = booking['bookedBy'];
       final shop = booking['shop'];
-      final serviceDocId = sanitizeDocId(booking['serviceName'] ?? '');
+      final serviceDocId = booking['serviceDocId']; // 👈 use stored id
+
+      debugPrint(
+        "🟡 Deleting from consumers/${bookedBy["docId"]}/bookings/$serviceDocId",
+      );
+      debugPrint(
+        "🟡 Deleting from shops/${shop["shopId"]}/bookings/$serviceDocId",
+      );
 
       // Mark as deleted in both consumer and shop collections
       await Future.wait([
@@ -218,11 +227,10 @@ class BookingProvider with ChangeNotifier {
             .doc(serviceDocId)
             .update({"isDeleted": true}),
       ]);
+
       debugPrint("🗑️ Booking marked as deleted: $serviceDocId");
     } catch (e) {
       debugPrint("🔥 Error deleting booking: $e");
     }
   }
-
-  // ...existing code...
 }
