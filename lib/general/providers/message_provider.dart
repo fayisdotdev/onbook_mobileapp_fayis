@@ -10,7 +10,12 @@ class MessageProvider with ChangeNotifier {
     _selectedShop = shop;
   }
 
-  /// Get message stream for a specific chat (user's docId + shopId)
+  /// Create a unique chatId for user and shop
+  String _chatId(String userDocId, String shopId) {
+    return "${userDocId}_$shopId";
+  }
+
+  /// Stream messages for a chat
   Stream<List<Map<String, dynamic>>> getMessagesStream(String shopId) {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) throw Exception("User not logged in");
@@ -31,7 +36,7 @@ class MessageProvider with ChangeNotifier {
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
-  /// Send a message to Firestore and update chat metadata
+  /// Send message and update in `chats`, `shops/{shopId}/chats`, `consumers/{consumerId}/chats`
   Future<void> sendMessage(String messageText) async {
     if (_selectedShop == null) {
       throw Exception("No shop selected for chat");
@@ -51,112 +56,136 @@ class MessageProvider with ChangeNotifier {
         .get();
 
     final senderName = consumerDoc.data()?['name'] ?? 'Unknown';
-
     final chatId = _chatId(consumerDocId, _selectedShop!.shopId!);
 
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-
-    // sanitize message (remove illegal characters for Firestore docId)
     final safeMessage = messageText.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-
-    // unique custom ID: message + consumerDocId + timestamp
     final customMessageId = "${safeMessage}_${consumerDocId}_$timestamp";
 
     final messageData = {
       'message': messageText,
       'senderId': consumerDocId,
+      'senderType': 'consumer',
       'senderName': senderName,
       'timestamp': FieldValue.serverTimestamp(),
+      'seenBy': [consumerDocId],
     };
 
-    // Save message under chat with custom doc ID
-    await FirebaseFirestore.instance
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .doc(customMessageId)
-        .set(messageData);
-
-    // Update chat metadata
-    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+    final chatMeta = {
       'chatId': chatId,
       'shopId': _selectedShop!.shopId,
       'shopName': _selectedShop!.shopName,
       'shopCity': _selectedShop!.city,
       'shopEmail': _selectedShop!.shopEmail,
-      'userDocId': consumerDocId,
+      'consumerId': consumerDocId,
       'participants': [consumerDocId, _selectedShop!.shopId],
       'lastMessage': messageText,
       'lastMessageTime': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
+      'lastMessageSenderId': consumerDocId, // 👈 add this
+      'lastMessageSenderName': senderName, // 👈 add this
+    };
 
-  /// Create a unique chatId for user and shop
-  String _chatId(String userDocId, String shopId) {
-    return "${userDocId}_$shopId";
-  }
+    final batch = FirebaseFirestore.instance.batch();
 
-  /// Fetch shop list for chat screen (recent chats + all shops)
-  /// Fetch shop list for chat screen (recent chats + all shops)
-Future<List<Map<String, dynamic>>> fetchShopsList() async {
-  final currentUser = FirebaseAuth.instance.currentUser;
-  if (currentUser == null) return [];
-
-  final userId = currentUser.uid;
-
-  // Step 1: Fetch all shops
-  final allShopsDocs = await FirebaseFirestore.instance
-      .collection('shops')
-      .get();
-
-  List<Map<String, dynamic>> recentShops = [];
-  List<Map<String, dynamic>> allShops = [];
-
-  for (var doc in allShopsDocs.docs) {
-    final data = doc.data();
-    final shopId = doc.id;
-
-    // Step 2: build chatId
-    final chatId = _chatId(userId, shopId);
-
-    // Step 3: check if chat exists for this user
-    final chatDoc = await FirebaseFirestore.instance
-        .collection('shops')
-        .doc(shopId)
+    // Save message in global chat
+    final globalMsgRef = FirebaseFirestore.instance
         .collection('chats')
         .doc(chatId)
-        .get();
+        .collection('messages')
+        .doc(customMessageId);
+    batch.set(globalMsgRef, messageData);
 
-    if (chatDoc.exists) {
-      final chatData = chatDoc.data()!;
-      recentShops.add({
-        'shopId': shopId,
-        'shopName': chatData['shopName'] ?? data['shopName'] ?? '',
-        'city': chatData['shopCity'] ?? data['city'] ?? '',
-        'email': chatData['shopEmail'] ?? data['email'] ?? '',
-        'lastMessageTime': (chatData['lastMessageTime'] != null)
-            ? (chatData['lastMessageTime'] as Timestamp).toDate()
-            : null,
-      });
-    }
+    // Update global chat metadata
+    final globalChatRef = FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatId);
+    batch.set(globalChatRef, chatMeta, SetOptions(merge: true));
 
-    // Add shop to allShops as fallback
-    allShops.add({
-      'shopId': shopId,
-      'shopName': data['shopName'] ?? '',
-      'city': data['city'] ?? '',
-      'email': data['email'] ?? '',
-      'lastMessageTime': null,
-    });
+    // Mirror under shop
+    final shopChatRef = FirebaseFirestore.instance
+        .collection('shops')
+        .doc(_selectedShop!.shopId)
+        .collection('chats')
+        .doc(chatId);
+    batch.set(shopChatRef, chatMeta, SetOptions(merge: true));
+
+    // Mirror under consumer
+    final consumerChatRef = FirebaseFirestore.instance
+        .collection('consumers')
+        .doc(consumerDocId)
+        .collection('chats')
+        .doc(chatId);
+    batch.set(consumerChatRef, chatMeta, SetOptions(merge: true));
+
+    await batch.commit();
   }
 
-  // Step 4: Merge lists (recent chats first, then others)
-  final recentIds = recentShops.map((e) => e['shopId']).toSet();
-  final newShops = allShops
-      .where((shop) => !recentIds.contains(shop['shopId']))
-      .toList();
+  /// Fetch shops list with recent chats (merged view)
+  Stream<List<Map<String, dynamic>>> fetchShopsList() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return const Stream.empty();
+    }
 
-  return [...recentShops, ...newShops];
-}
+    final consumerDocId = currentUser.email!
+        .trim()
+        .replaceAll(' ', '-')
+        .toLowerCase();
 
+    final shopsStream = FirebaseFirestore.instance
+        .collection('shops')
+        .snapshots();
+
+    return shopsStream.asyncMap((shopsSnapshot) async {
+      final allShops = shopsSnapshot.docs.map((doc) {
+        final shopData = doc.data();
+        return {
+          'shopId': doc.id,
+          'shopName': shopData['shopName'] ?? '',
+          'city': shopData['city'] ?? '',
+          'email': shopData['email'] ?? '',
+          'lastMessage': null,
+          'lastMessageTime': null,
+        };
+      }).toList();
+
+      final chatDocs = await FirebaseFirestore.instance
+          .collection('consumers')
+          .doc(consumerDocId)
+          .collection('chats')
+          .get();
+
+      final recentShops = <Map<String, dynamic>>[];
+
+      for (var chatDoc in chatDocs.docs) {
+        final chatData = chatDoc.data();
+        recentShops.add({
+          'shopId': chatData['shopId'],
+          'shopName': chatData['shopName'] ?? '',
+          'city': chatData['shopCity'] ?? '',
+          'email': chatData['shopEmail'] ?? '',
+          'lastMessage': chatData['lastMessage'] ?? '',
+          'lastMessageTime': (chatData['lastMessageTime'] != null)
+              ? (chatData['lastMessageTime'] as Timestamp).toDate()
+              : null,
+        });
+      }
+
+      final recentIds = recentShops.map((e) => e['shopId']).toSet();
+      final newShops = allShops
+          .where((shop) => !recentIds.contains(shop['shopId']))
+          .toList();
+
+      recentShops.sort((a, b) {
+        final aTime = a['lastMessageTime'] as DateTime?;
+        final bTime = b['lastMessageTime'] as DateTime?;
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        return bTime.compareTo(aTime);
+      });
+
+      return [...recentShops, ...newShops];
+    });
+  }
 }

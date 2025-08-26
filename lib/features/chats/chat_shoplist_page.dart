@@ -15,13 +15,6 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  late Future<List<Map<String, dynamic>>> _shopsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadShops();
-  }
 
   @override
   void dispose() {
@@ -29,21 +22,10 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
     super.dispose();
   }
 
-  void _loadShops() {
-    final messageProvider = Provider.of<MessageProvider>(
-      context,
-      listen: false,
-    );
-    _shopsFuture = messageProvider.fetchShopsList();
-  }
-
-  Future<void> _refresh() async {
-    _loadShops();
-    setState(() {}); // Trigger rebuild
-  }
-
   @override
   Widget build(BuildContext context) {
+    final messageProvider = Provider.of<MessageProvider>(context, listen: false);
+
     return Scaffold(
       appBar: AppBar(title: const Text("Select Shop to Chat")),
       body: Column(
@@ -68,93 +50,111 @@ class _ChatShopListScreenState extends State<ChatShopListScreen> {
             ),
           ),
 
+          // 🔹 Shops list (real-time)
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: _refresh,
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _shopsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: messageProvider.fetchShopsList(), // now returns a Stream
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return ListView(
-                      children: const [
-                        SizedBox(height: 300),
-                        Center(child: Text("No shops available")),
-                      ],
-                    );
-                  }
-
-                  // 🔍 Apply filtering
-                  final query = _searchQuery.toLowerCase();
-                  final filteredShops = snapshot.data!.where((shop) {
-                    final name = (shop['shopName'] ?? '').toLowerCase();
-                    final city = (shop['city'] ?? '').toLowerCase();
-                    return name.contains(query) || city.contains(query);
-                  }).toList();
-
-                  if (filteredShops.isEmpty) {
-                    return ListView(
-                      children: [
-                        const SizedBox(height: 300),
-                        Center(
-                          child: Text(
-                            'No shops found for "$_searchQuery"',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(8),
-                    separatorBuilder: (_, __) => const Divider(),
-                    itemCount: filteredShops.length,
-                    itemBuilder: (context, index) {
-                      final shop = filteredShops[index];
-                      // ...existing code...
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blue.shade100,
-                          child: const Icon(Icons.store, color: Colors.blue),
-                        ),
-                        title: Text(
-                          shop['shopName'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(shop['city'] ?? ''),
-                        // trailing: shop['lastMessageTime'] == null
-                        //     ? const Text(
-                        //         "Start new chat",
-                        //         style: TextStyle(color: Colors.green),
-                        //       )
-                        //     : null,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatScreen(
-                                shopId: shop['shopId'],
-                                shopName: shop['shopName'],
-                                shopCity: shop['city'],
-                                shopEmail: shop['email'],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                      // ...existing code...
-                    },
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return ListView(
+                    children: const [
+                      SizedBox(height: 300),
+                      Center(child: Text("No shops available")),
+                    ],
                   );
-                },
-              ),
+                }
+
+                // 🔍 Apply filtering
+                final query = _searchQuery.toLowerCase();
+                final filteredShops = snapshot.data!.where((shop) {
+                  final name = (shop['shopName'] ?? '').toLowerCase();
+                  final city = (shop['city'] ?? '').toLowerCase();
+                  return name.contains(query) || city.contains(query);
+                }).toList();
+
+                if (filteredShops.isEmpty) {
+                  return ListView(
+                    children: [
+                      const SizedBox(height: 300),
+                      Center(
+                        child: Text(
+                          'No shops found for "$_searchQuery"',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(8),
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemCount: filteredShops.length,
+                  itemBuilder: (context, index) {
+                    final shop = filteredShops[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue.shade100,
+                        child: const Icon(Icons.store, color: Colors.blue),
+                      ),
+                      title: Text(
+                        shop['shopName'] ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        shop['lastMessage'] != null &&
+                                (shop['lastMessage'] as String).isNotEmpty
+                            ? shop['lastMessage']
+                            : (shop['city'] ?? ''),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: shop['lastMessageTime'] != null
+                          ? Text(
+                              _formatTime(shop['lastMessageTime']),
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.grey),
+                            )
+                          : const Text(
+                              "Start new chat",
+                              style: TextStyle(color: Colors.green),
+                            ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(
+                              shopId: shop['shopId'],
+                              shopName: shop['shopName'],
+                              shopCity: shop['city'],
+                              shopEmail: shop['email'],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    if (dateTime.day == now.day &&
+        dateTime.month == now.month &&
+        dateTime.year == now.year) {
+      return "${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}";
+    } else {
+      return "${dateTime.day}/${dateTime.month}";
+    }
   }
 }
